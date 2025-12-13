@@ -35,43 +35,6 @@
   <script>
 
 
-      function openForm(zajecie) {
-        const container = document.getElementById('container');
-
-        // Tworzymy formularz
-        const formDiv = document.createElement('div');
-        formDiv.className = 'form-modal';
-        formDiv.innerHTML = `
-          <h3>Zapis na: ${zajecie.nazwa} (${zajecie.dzien} ${zajecie.godzina_od}-${zajecie.godzina_do})</h3>
-          <label>Imię i nazwisko dziecka: <input type="text" id="uczen"></label><br>
-          <label>Klasa: <input type="text" id="klasa"></label><br>
-          <label>Imię i nazwisko rodzica: <input type="text" id="rodzic"></label><br>
-          <button id="submitForm">Zapisz</button>
-          <button id="cancelForm">Anuluj</button>
-        `;
-
-        container.prepend(formDiv);
-
-        document.getElementById('submitForm').onclick = () => {
-          const data = {
-            id_zajecia: zajecie.id,
-            nazwa: zajecie.nazwa,
-            uczen: document.getElementById('uczen').value.trim(),
-            klasa: document.getElementById('klasa').value.trim(),
-            rodzic: document.getElementById('rodzic').value.trim()
-          };
-          google.script.run.withSuccessHandler(msg => {
-            alert(msg);
-            formDiv.remove();
-          }).zapiszDziecko(data);
-        };
-
-        document.getElementById('cancelForm').onclick = () => {
-          formDiv.remove();
-        };
-      }
-
-
 
     // Pobranie danych z Apps Script
     google.script.run.withSuccessHandler(render).getZajeciaList();
@@ -120,7 +83,7 @@
           `;
           const button = document.createElement('button');
           button.textContent = 'Zapisz dziecko';
-          button.onclick = () => openForm(z); // przekazujemy dane zajęcia
+          button.onclick = () => openDrawer(z); 
           card.appendChild(button);
           grid.appendChild(card);
         });
@@ -129,6 +92,66 @@
         container.appendChild(daySection);
       });
     }
+
+function showMessage(msg, color = 'green') {
+  const oldMsg = document.getElementById('custom-message');
+  if (oldMsg) oldMsg.remove();
+
+  // Tworzymy nowy komunikat
+  const div = document.createElement('div');
+  div.id = 'custom-message';
+  div.style.position = 'fixed';
+  div.style.bottom = '20px';
+  div.style.right = '20px';
+  div.style.background = color
+  div.style.color = 'white';
+  div.style.padding = '15px 20px';
+  div.style.borderRadius = '8px';
+  div.style.boxShadow = '0 0 10px rgba(0,0,0,0.3)';
+  div.style.zIndex = 2000;
+  div.textContent = msg;
+  document.body.appendChild(div);
+  setTimeout(() => div.remove(), 3000);
+}
+
+
+function openDrawer(zajecie) {
+  const overlay = document.createElement('div');
+  overlay.className = 'drawer-overlay active';
+  const drawer = document.createElement('div');
+  drawer.className = 'drawer open';
+  drawer.innerHTML = `
+    <h3>Zapis na: ${zajecie.nazwa}</h3>
+    <label>Imię i nazwisko dziecka: <input type="text" id="uczen"></label><br>
+    <label>Klasa: <input type="text" id="klasa"></label><br>
+    <label>Imię i nazwisko rodzica: <input type="text" id="rodzic"></label><br>
+    <button id="submitForm">Zapisz</button>
+    <button id="cancelForm">Anuluj</button>
+  `;
+  document.body.appendChild(overlay);
+  document.body.appendChild(drawer);
+
+  overlay.onclick = () => { drawer.remove(); overlay.remove(); };
+  document.getElementById('cancelForm').onclick = () => { drawer.remove(); overlay.remove(); };
+  document.getElementById('submitForm').onclick = () => {
+    const data = {
+      id_zajecia: zajecie.id,
+      nazwa: zajecie.nazwa,
+      uczen: document.getElementById('uczen').value.trim(),
+      klasa: document.getElementById('klasa').value.trim(),
+      rodzic: document.getElementById('rodzic').value.trim()
+    };
+    google.script.run.withSuccessHandler(msg => {
+      showMessage(msg);       
+      drawer.remove();
+      overlay.remove();
+    }).withFailureHandler(err => {
+      showMessage('Błąd: ' + err.message, 'red');
+    }).zapiszDziecko(data);
+  };
+}
+
+
   </script>
 </body>
 </html>

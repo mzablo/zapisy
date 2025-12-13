@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <?!= HtmlService.createHtmlOutputFromFile('Style').getContent(); ?>
+  <style>
+    /* Minimalny styl kafelków */
+    .day-section {
+      margin-bottom: 30px;
+    }
+    .day-section h2 {
+      margin-bottom: 10px;
+    }
+    .grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .card {
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 10px;
+      width: 200px;
+      background-color: #f9f9f9;
+      box-shadow: 1px 1px 5px rgba(0,0,0,0.1);
+    }
+    .paid { color: red; font-weight: bold; }
+    .free { color: green; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>📅 Lista zajęć</h1>
+  <div id="container">Ładowanie zajęć...</div>
+
+  <script>
+    // Pobranie danych z Apps Script
+    google.script.run.withSuccessHandler(render).getZajeciaList();
+
+    function render(data) {
+      const container = document.getElementById('container');
+      container.innerHTML = ''; // czyścimy napis "Ładowanie"
+
+      if (!data || data.length === 0) {
+        container.textContent = 'Brak zajęć do wyświetlenia.';
+        return;
+      }
+
+      // Grupowanie zajęć po dniach
+      const grouped = {};
+      data.forEach(z => {
+        if (!grouped[z.dzien]) grouped[z.dzien] = [];
+        grouped[z.dzien].push(z);
+      });
+
+      Object.keys(grouped).forEach(dzien => {
+        const daySection = document.createElement('div');
+        daySection.className = 'day-section';
+
+        const title = document.createElement('h2');
+        title.textContent = dzien;
+        daySection.appendChild(title);
+
+        const grid = document.createElement('div');
+        grid.className = 'grid';
+
+        grouped[dzien].forEach(z => {
+          const card = document.createElement('div');
+          card.className = 'card';
+
+          card.innerHTML = `
+            <h3>${z.nazwa}</h3>
+            <p><strong>⏰</strong> ${z.godzina_od} – ${z.godzina_do}</p>
+            <p><strong>🎓 Klasa:</strong> ${z.klasa}</p>
+            <p><strong>Ilość dostępnych miejsc!!:</strong> ${z.max_limit}</p>
+            <p><strong>Czy dostepne!!:</strong> ${z.min_limit}</p>
+            <p><strong>Czy zostanie uruchomione!!:</strong> ${z.min_limit}</p>
+            <p class="${z.platne ? 'paid' : 'free'}">
+              ${z.platne ? '💰 Płatne' : '✅ Bezpłatne'}
+            </p>
+          `;
+
+          grid.appendChild(card);
+        });
+
+        daySection.appendChild(grid);
+        container.appendChild(daySection);
+      });
+    }
+  </script>
+</body>
+</html>

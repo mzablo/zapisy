@@ -3,6 +3,10 @@ function doGet() {
      .setTitle('Lista zajęć dodatkowych');
 }
 
+function getFormHtml() {
+  return HtmlService.createHtmlOutputFromFile('form').getContent();
+}
+
 function getZajeciaList() {
   const ss = SpreadsheetApp.openById("1aO2VjpPdH3Bn6sWbClTeOr08PoV5J7qeotloTFbvKRQ");
   const sheet = ss.getSheetByName('zajecia');

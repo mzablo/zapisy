@@ -26,6 +26,48 @@ function getZajeciaList() {
   return activities;
 }
 
+function zapiszDziecko(data) {
+  const ss = SpreadsheetApp.openById("1aO2VjpPdH3Bn6sWbClTeOr08PoV5J7qeotloTFbvKRQ");
+  const sheetZajecia = ss.getSheetByName('zajecia');
+  const sheetZapisy = ss.getSheetByName('zapisy');
+  
+  const zapisData = sheetZapisy.getDataRange().getValues();
+  const headers = zapisData.shift();
+
+  // Sprawdzenie konfliktów
+  const konflikt = zapisData.some(r => {
+    const uczen = r[3]; // kolumna "uczen"
+    const dzien_godzina = getDzienGodzina(r[2], r[5]); // nazwa zajecia + data_zapisu
+    const now_dzien_godzina = getDzienGodzina(data.nazwa, data.data_zapisu);
+    
+    return (uczen === data.uczen) &&
+           (r[1] === data.id_zajecia || dzien_godzina === now_dzien_godzina);
+  });
+
+  if (konflikt) {
+    return "Błąd: dziecko jest już zapisane na to zajęcie lub ma kolizję czasową.";
+  }
+
+  // Dodanie wiersza
+  sheetZapisy.appendRow([
+    zapisData.length + 1,
+    data.id_zajecia,
+    data.nazwa,
+    data.uczen,
+    data.klasa,
+    new Date(), // automatyczna data zapisu
+    data.rodzic
+  ]);
+
+  return "Zapisano dziecko!";
+}
+
+// Funkcja pomocnicza do porównania dnia i godziny
+function getDzienGodzina(nazwaZajecia, dataZapisu) {
+  return nazwaZajecia + '|' + dataZapisu; // prosty sposób
+}
+
+
 function formatTime(value) {
   if (!value) return "";
   if (value instanceof Date) {
@@ -36,6 +78,12 @@ function formatTime(value) {
   }
   return value.toString(); 
 }
+
+// Funkcja pomocnicza do porównania dnia i godziny
+function getDzienGodzina(nazwaZajecia, dataZapisu) {
+  return nazwaZajecia + '|' + dataZapisu; // prosty sposób
+}
+
 
 class Activity {
   constructor(id, nazwa, dzien, od, do_, klasa, max, min, platne) {

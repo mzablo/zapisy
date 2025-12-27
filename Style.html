@@ -1,56 +1,122 @@
 <style>
-
-.drawer {
-  position: fixed;
-  top: 0;
-  right: -400px; /* początkowo poza ekranem */
-  width: 400px;
-  height: 100%;
-  background: white;
-  box-shadow: -2px 0 8px rgba(0,0,0,0.3);
-  transition: right 0.3s ease;
-  z-index: 1000;
-  padding: 20px;
-}
-.drawer.open {
-  right: 0; /* wysuwamy */
-}
-.drawer-overlay {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: rgba(0,0,0,0.5);
-  z-index: 999;
-  display: none;
-}
-.drawer-overlay.active {
-  display: block;
-}
-
-
+  /* --- Globalne ustawienia --- */
   body {
     font-family: Arial, sans-serif;
-    background-color: #f4f4f4;
-    padding: 20px;
+    margin: 0;
+    padding: 12px;
+    background: #f5f6f8;
   }
 
   h1 {
-    color: #333;
+    font-size: 22px;
+    margin-bottom: 16px;
   }
 
-  table {
-    border-collapse: collapse;
+  h2 {
+    font-size: 18px;
+    margin-bottom: 10px;
+  }
+
+  /* --- Grid i karty --- */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+  }
+
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .card h3 {
+    margin: 0;
+    font-size: 16px;
+  }
+
+  .card p {
+    margin: 0;
+    font-size: 14px;
+  }
+
+  button {
+  width: 100%;  /* Pełna szerokość */
+  margin-top: 12px;
+  padding: 12px;
+  font-size: 16px;  /* min 16px dla mobile */
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  background: #1976d2;
+  color: white;
+}
+
+#cancelForm {
+  background: #aaa !important;
+  margin-top: 8px;
+}
+  button:active {
+    transform: scale(0.98);
+  }
+
+  .paid { color: #c62828; font-weight: bold; }
+  .free { color: #2e7d32; font-weight: bold; }
+
+  input {
     width: 100%;
-    margin-top: 10px;
-  }
-
-  th, td {
-    border: 1px solid #ccc;
     padding: 8px;
-    text-align: left;
+    margin-top: 4px;
+    margin-bottom: 10px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 14px;
   }
 
-  th {
-    background-color: #eee;
+  /* --- Drawer --- */
+  .drawer-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 999;
   }
+  
+
+  .drawer {
+    position: fixed;
+    z-index: 1000;
+    background: white;
+    padding: 20px;
+    box-shadow: -2px 0 10px rgba(0,0,0,0.3);
+    max-height: 90vh;
+    overflow-y: auto;  /* Ważne! scroll dla długiej zawartości */
+    box-sizing: border-box;
+  }
+
+  /* Desktop - z prawej */
+@media (min-width: 768px) {
+  .drawer {
+    top: 0;
+    right: 0;
+    width: 320px;
+    height: 100%;
+    border-radius: 0;
+  }
+}
+
+/* Mobile - z dołu */
+@media (max-width: 767px) {
+  .drawer {
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    max-height: 80vh;  /* Maks 80% ekranu */
+    border-radius: 16px 16px 0 0;
+    animation: slideUp 0.25s ease-out;
+  }
+}
 </style>

@@ -1,6 +1,17 @@
+const FORM_ID = PropertiesService.getScriptProperties().getProperty('FORM_ID') || '1aO2VjpPdH3Bn6sWbClTeOr08PoV5J7qeotloTFbvKRQ';
+
+
+
 function doGet() {
-  return HtmlService.createTemplateFromFile('index').evaluate()
-     .setTitle('Lista zajęć dodatkowych');
+  const template = HtmlService.createTemplateFromFile('index');
+  return template.evaluate()
+    .setTitle('Aplikacja do zapisów')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1.0');
+}
+
+function include(filename) {
+  return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
 function getFormHtml() {
@@ -8,7 +19,7 @@ function getFormHtml() {
 }
 
 function getZajeciaList() {
-  const ss = SpreadsheetApp.openById("1aO2VjpPdH3Bn6sWbClTeOr08PoV5J7qeotloTFbvKRQ");
+  const ss = SpreadsheetApp.openById(FORM_ID);
   const sheet = ss.getSheetByName('zajecia');
   const data = sheet.getDataRange().getValues();
 
@@ -30,21 +41,44 @@ function getZajeciaList() {
   return activities;
 }
 
+function ileAktualnieZapisowNaZajecie(id_zajecia, zapisyData){
+  return zapisyData.filter(r => r[1] == id_zajecia).length;
+}
+
+function jakiLimitDlaZajecia(id_zajecia, zajeciaData){
+  const zajeciaHeaders = zajeciaData.shift();
+  const idIndex = zajeciaHeaders.indexOf('id'); 
+  const maxLimitIndex = zajeciaHeaders.indexOf('max_limit');
+  const zajecieRow = zajeciaData.find(row => row[idIndex] == id_zajecia);
+  return zajecieRow[maxLimitIndex];
+ }
+
+function jakieMinimumDlaZajecia(id_zajecia, zajeciaData){
+  const zajeciaHeaders = zajeciaData.shift();
+  const idIndex = zajeciaHeaders.indexOf('id'); 
+  const minLimitIndex = zajeciaHeaders.indexOf('min_limit');
+  const zajecieRow = zajeciaData.find(row => row[idIndex] == id_zajecia);
+  return zajecieRow[minLimitIndex];
+ }
+
 function zapiszDziecko(data) {
-  const ss = SpreadsheetApp.openById("1aO2VjpPdH3Bn6sWbClTeOr08PoV5J7qeotloTFbvKRQ");
-  const sheetZajecia = ss.getSheetByName('zajecia');
-  const sheetZapisy = ss.getSheetByName('zapisy');
-  
-  const zapisData = sheetZapisy.getDataRange().getValues();
-  const headers = zapisData.shift();
+  const ss = SpreadsheetApp.openById(FORM_ID);
+  const sheetZapisy=ss.getSheetByName('zapisy');
+  const zajeciaData = ss.getSheetByName('zajecia').getDataRange().getValues();
+  const zapisyData = sheetZapisy.getDataRange().getValues();
+  const aktualneZapisy = ileAktualnieZapisowNaZajecie(data.id_zajecia, zapisyData);
+  const maxLimit = jakiLimitDlaZajecia(data.id_zajecia, zajeciaData); 
+    if (aktualneZapisy >= maxLimit) {
+      return `❌ Limit miejsc przekroczony! Dostępne: 0/${maxLimit}`;
+    }
 
   // Sprawdzenie konfliktów
-  const konflikt = zapisData.some(r => {
+  const konflikt = zapisyData.some(r => {
     const uczen = r[3]; // kolumna "uczen"
     const dzien_godzina = getDzienGodzina(r[2], r[5]); // nazwa zajecia + data_zapisu
     const now_dzien_godzina = getDzienGodzina(data.nazwa, data.data_zapisu);
     
-    return (uczen === data.uczen) &&
+    return (uczen.toLowerCase().trim() === data.uczen.toLowerCase().trim()) &&
            (r[1] === data.id_zajecia || dzien_godzina === now_dzien_godzina);
   });
 
@@ -54,13 +88,13 @@ function zapiszDziecko(data) {
 
   // Dodanie wiersza
   sheetZapisy.appendRow([
-    zapisData.length + 1,
+    zapisyData.length + 1,
     data.id_zajecia,
     data.nazwa,
-    data.uczen,
+    data.uczen.trim(),
     data.klasa,
     new Date(), // automatyczna data zapisu
-    data.rodzic
+    data.rodzic.trim()
   ]);
 
   return "Zapisano dziecko!";
@@ -81,11 +115,6 @@ function formatTime(value) {
     return h + ":" + m;
   }
   return value.toString(); 
-}
-
-// Funkcja pomocnicza do porównania dnia i godziny
-function getDzienGodzina(nazwaZajecia, dataZapisu) {
-  return nazwaZajecia + '|' + dataZapisu; // prosty sposób
 }
 
 

@@ -1,41 +1,23 @@
 <!DOCTYPE html>
-<html>
+<html lang="pl">
 <head>
-  <base target="_top">
-  <?!= HtmlService.createHtmlOutputFromFile('Style').getContent(); ?>
-  <style>
-    /* Minimalny styl kafelków */
-    .day-section {
-      margin-bottom: 30px;
-    }
-    .day-section h2 {
-      margin-bottom: 10px;
-    }
-    .grid {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-    .card {
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      padding: 10px;
-      width: 200px;
-      background-color: #f9f9f9;
-      box-shadow: 1px 1px 5px rgba(0,0,0,0.1);
-    }
-    .paid { color: red; font-weight: bold; }
-    .free { color: green; font-weight: bold; }
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aplikacja do zapisów na zajęcia dodatkowe</title>
+
+  <!-- Bootstrap CSS najpierw 
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+-->
+  <!-- Twój lokalny CSS -->
+  <?!= include('style') ?>
 </head>
 <body>
-  <h1>📅 Lista zajęć</h1>
-  <div id="container">Ładowanie zajęć...</div>
+  <div class="container mt-3">
+    <h1>📅 Lista zajęć mobile</h1>
+    <div id="container">Ładowanie zajęć...</div>
+  </div>
 
   <script>
-
-
-
     // Pobranie danych z Apps Script
     google.script.run.withSuccessHandler(render).getZajeciaList();
 
@@ -74,17 +56,19 @@
             <h3>${z.nazwa}</h3>
             <p><strong>⏰</strong> ${z.godzina_od} – ${z.godzina_do}</p>
             <p><strong>🎓 Klasa:</strong> ${z.klasa}</p>
-            <p><strong>Ilość dostępnych miejsc!!:</strong> ${z.max_limit}</p>
-            <p><strong>Czy dostepne!!:</strong> ${z.min_limit}</p>
-            <p><strong>Czy zostanie uruchomione!!:</strong> ${z.min_limit}</p>
+            <p><strong>Ilość dostępnych miejsc:</strong> ${z.max_limit}</p>
+            <p><strong>Czy dostępne:</strong> ${z.min_limit}</p>
+            <p><strong>Czy zostanie uruchomione:</strong> ${z.min_limit}</p>
             <p class="${z.platne ? 'paid' : 'free'}">
               ${z.platne ? '💰 Płatne' : '✅ Bezpłatne'}
             </p>
           `;
+
           const button = document.createElement('button');
           button.textContent = 'Zapisz dziecko';
-          button.onclick = () => openDrawer(z); 
+          button.onclick = () => openDrawer(z);
           card.appendChild(button);
+
           grid.appendChild(card);
         });
 
@@ -93,65 +77,77 @@
       });
     }
 
-function showMessage(msg, color = 'green') {
-  const oldMsg = document.getElementById('custom-message');
-  if (oldMsg) oldMsg.remove();
+    // Funkcja do pokazywania komunikatów
+    function showMessage(msg, color = 'green') {
+      const oldMsg = document.getElementById('custom-message');
+      if (oldMsg) oldMsg.remove();
 
-  // Tworzymy nowy komunikat
-  const div = document.createElement('div');
-  div.id = 'custom-message';
-  div.style.position = 'fixed';
-  div.style.bottom = '20px';
-  div.style.right = '20px';
-  div.style.background = color
-  div.style.color = 'white';
-  div.style.padding = '15px 20px';
-  div.style.borderRadius = '8px';
-  div.style.boxShadow = '0 0 10px rgba(0,0,0,0.3)';
-  div.style.zIndex = 2000;
-  div.textContent = msg;
-  document.body.appendChild(div);
-  setTimeout(() => div.remove(), 3000);
-}
+      const div = document.createElement('div');
+      div.id = 'custom-message';
+      div.style.position = 'fixed';
+      div.style.bottom = '20px';
+      div.style.right = '20px';
+      div.style.background = color;
+      div.style.color = 'white';
+      div.style.padding = '15px 20px';
+      div.style.borderRadius = '8px';
+      div.style.boxShadow = '0 0 10px rgba(0,0,0,0.3)';
+      div.style.zIndex = 2000;
+      div.textContent = msg;
+      document.body.appendChild(div);
+      setTimeout(() => div.remove(), 3000);
+    }
 
+    // Funkcja drawer
+    function openDrawer(zajecie) {
+      const overlay = document.createElement('div');
+      overlay.className = 'drawer-overlay active';
 
-function openDrawer(zajecie) {
-  const overlay = document.createElement('div');
-  overlay.className = 'drawer-overlay active';
-  const drawer = document.createElement('div');
-  drawer.className = 'drawer open';
-  drawer.innerHTML = `
-    <h3>Zapis na: ${zajecie.nazwa}</h3>
-    <label>Imię i nazwisko dziecka: <input type="text" id="uczen"></label><br>
-    <label>Klasa: <input type="text" id="klasa"></label><br>
-    <label>Imię i nazwisko rodzica: <input type="text" id="rodzic"></label><br>
-    <button id="submitForm">Zapisz</button>
-    <button id="cancelForm">Anuluj</button>
-  `;
-  document.body.appendChild(overlay);
-  document.body.appendChild(drawer);
+      const drawer = document.createElement('div');
+      drawer.className = 'drawer open';
+     drawer.innerHTML = `
+      <h3>Zapis na: ${zajecie.nazwa}</h3>
+      
+      <label>Imię i nazwisko dziecka
+        <input type="text" id="uczen" required>
+      </label>
+      
+      <label>Klasa
+        <input type="text" id="klasa" required>
+      </label>
+      
+      <label>Imię i nazwisko rodzica
+        <input type="text" id="rodzic" required>
+      </label>
+      
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <button id="submitForm" style="background: #1976d2; flex: 1;">✅ Zapisz</button>
+        <button id="cancelForm" style="background: #aaa; flex: 1;">❌ Anuluj</button>
+      </div>
+    `;
 
-  overlay.onclick = () => { drawer.remove(); overlay.remove(); };
-  document.getElementById('cancelForm').onclick = () => { drawer.remove(); overlay.remove(); };
-  document.getElementById('submitForm').onclick = () => {
-    const data = {
-      id_zajecia: zajecie.id,
-      nazwa: zajecie.nazwa,
-      uczen: document.getElementById('uczen').value.trim(),
-      klasa: document.getElementById('klasa').value.trim(),
-      rodzic: document.getElementById('rodzic').value.trim()
-    };
-    google.script.run.withSuccessHandler(msg => {
-      showMessage(msg);       
-      drawer.remove();
-      overlay.remove();
-    }).withFailureHandler(err => {
-      showMessage('Błąd: ' + err.message, 'red');
-    }).zapiszDziecko(data);
-  };
-}
+      document.body.appendChild(overlay);
+      document.body.appendChild(drawer);
 
-
+      overlay.onclick = () => { drawer.remove(); overlay.remove(); };
+      document.getElementById('cancelForm').onclick = () => { drawer.remove(); overlay.remove(); };
+      document.getElementById('submitForm').onclick = () => {
+        const data = {
+          id_zajecia: zajecie.id,
+          nazwa: zajecie.nazwa,
+          uczen: document.getElementById('uczen').value.trim(),
+          klasa: document.getElementById('klasa').value.trim(),
+          rodzic: document.getElementById('rodzic').value.trim()
+        };
+        google.script.run.withSuccessHandler(msg => {
+          showMessage(msg);
+          drawer.remove();
+          overlay.remove();
+        }).withFailureHandler(err => {
+          showMessage('Błąd: ' + err.message, 'red');
+        }).zapiszDziecko(data);
+      };
+    }
   </script>
 </body>
 </html>

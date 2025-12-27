@@ -1,7 +1,5 @@
 const FORM_ID = PropertiesService.getScriptProperties().getProperty('FORM_ID') || '1aO2VjpPdH3Bn6sWbClTeOr08PoV5J7qeotloTFbvKRQ';
 
-
-
 function doGet() {
   const template = HtmlService.createTemplateFromFile('index');
   return template.evaluate()
@@ -21,9 +19,9 @@ function getFormHtml() {
 function getZajeciaList() {
   const ss = SpreadsheetApp.openById(FORM_ID);
   const sheet = ss.getSheetByName('zajecia');
-  const data = sheet.getDataRange().getValues();
-
-  const headers = data.shift();
+  const zajeciaData = sheet.getDataRange().getValues();
+  zajeciaData.shift();
+  const zapisyData = ss.getSheetByName('zapisy').getDataRange().getValues();
 
   const dniOrder = {
     'Poniedziałek': 1,
@@ -33,32 +31,42 @@ function getZajeciaList() {
     'Piątek': 5
   };
 
-  const activities = data .filter(r => r[0]) .map(r => new Activity(r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7], r[8])) .sort((a, b) => { if (dniOrder[a.dzien] !== dniOrder[b.dzien]) { return dniOrder[a.dzien] - dniOrder[b.dzien]; } });
+  const activities = zajeciaData .filter(r => r[0])
+    .map(r => new Activity(r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7], r[8]))
+    .map(a => {
+      const aktualneZapisy = zapisyData.filter(row => row[1] == a.id).length;
+      Logger.log(a.id + ' | zapisanych: ' + aktualneZapisy +' | limit: ' + (jakiLimitDlaZajecia(a.id, zajeciaData)+" "+jakieMinimumDlaZajecia(a.id, zajeciaData)));
+      return new ActivityView(a.id, 
+        a.nazwa, 
+        a.dzien, 
+        a.godzina_od, 
+        a.godzina_do, 
+        a.klasa, 
+        a.max_limit,
+        a.min_limit,
+        (jakiLimitDlaZajecia(a.id, zajeciaData) - aktualneZapisy),
+        (aktualneZapisy >= jakieMinimumDlaZajecia(a.id, zajeciaData)),
+        a.platne,
+        aktualneZapisy
+      );
+    }
+    )
+    .sort((a, b) => { if (dniOrder[a.dzien] !== dniOrder[b.dzien]) { return dniOrder[a.dzien] - dniOrder[b.dzien]; } });
 
   activities.forEach(a => {
-      Logger.log(a.nazwa + ' | ' + a.dzien + ' | ' + a.godzina_od + '-' + a.godzina_do);
+      Logger.log(a.nazwa + ' | ' + a.dzien + ' | ' + a.godzina_od + '-' + a.godzina_do  + ' | ' + a.ileDostepnych  + ' | ' + a.czyUruchomione +' | ' + a.platne);
     });
   return activities;
 }
 
-function ileAktualnieZapisowNaZajecie(id_zajecia, zapisyData){
-  return zapisyData.filter(r => r[1] == id_zajecia).length;
-}
-
 function jakiLimitDlaZajecia(id_zajecia, zajeciaData){
-  const zajeciaHeaders = zajeciaData.shift();
-  const idIndex = zajeciaHeaders.indexOf('id'); 
-  const maxLimitIndex = zajeciaHeaders.indexOf('max_limit');
-  const zajecieRow = zajeciaData.find(row => row[idIndex] == id_zajecia);
-  return zajecieRow[maxLimitIndex];
+  const zajecieRow = zajeciaData.find(row => row[0] == id_zajecia);
+  return zajecieRow[6];//max_limit
  }
 
 function jakieMinimumDlaZajecia(id_zajecia, zajeciaData){
-  const zajeciaHeaders = zajeciaData.shift();
-  const idIndex = zajeciaHeaders.indexOf('id'); 
-  const minLimitIndex = zajeciaHeaders.indexOf('min_limit');
-  const zajecieRow = zajeciaData.find(row => row[idIndex] == id_zajecia);
-  return zajecieRow[minLimitIndex];
+  const zajecieRow = zajeciaData.find(row => row[0] == id_zajecia);
+  return zajecieRow[7];//min_limit
  }
 
 function zapiszDziecko(data) {
@@ -66,7 +74,7 @@ function zapiszDziecko(data) {
   const sheetZapisy=ss.getSheetByName('zapisy');
   const zajeciaData = ss.getSheetByName('zajecia').getDataRange().getValues();
   const zapisyData = sheetZapisy.getDataRange().getValues();
-  const aktualneZapisy = ileAktualnieZapisowNaZajecie(data.id_zajecia, zapisyData);
+  const aktualneZapisy = zapisyData.filter(row => row[1] == data.id_zajecia).length;
   const maxLimit = jakiLimitDlaZajecia(data.id_zajecia, zajeciaData); 
     if (aktualneZapisy >= maxLimit) {
       return `❌ Limit miejsc przekroczony! Dostępne: 0/${maxLimit}`;
@@ -100,9 +108,8 @@ function zapiszDziecko(data) {
   return "Zapisano dziecko!";
 }
 
-// Funkcja pomocnicza do porównania dnia i godziny
 function getDzienGodzina(nazwaZajecia, dataZapisu) {
-  return nazwaZajecia + '|' + dataZapisu; // prosty sposób
+  return nazwaZajecia + '|' + dataZapisu; 
 }
 
 
@@ -129,5 +136,22 @@ class Activity {
     this.max_limit = max;
     this.min_limit = min;
     this.platne = platne === "TAK";
+  }
+}
+
+class ActivityView {
+  constructor(id, nazwa, dzien, od, do_, klasa, max, min, ileDostepnych, czyUruchomione, platne, ileZapisanych) {
+    this.id = id;
+    this.nazwa = nazwa;
+    this.dzien = dzien;
+    this.godzina_od = formatTime(od);
+    this.godzina_do = formatTime(do_);
+    this.klasa = klasa;
+    this.max_limit = max;
+    this.min_limit = min;
+    this.ileDostepnych = ileDostepnych;
+    this.czyUruchomione = czyUruchomione;
+    this.platne = platne;
+    this.ileZapisanych = ileZapisanych;
   }
 }

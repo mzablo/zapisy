@@ -55,6 +55,13 @@
   background: #1976d2;
   color: white;
 }
+button.disabled,
+button:disabled {
+  background: #ccc !important;
+  color: #666 !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
+}
 
 #cancelForm {
   background: #aaa !important;
@@ -66,6 +73,11 @@
 
   .paid { color: #c62828; font-weight: bold; }
   .free { color: #2e7d32; font-weight: bold; }
+
+  .notRun { color: #c62828; }
+  .run { color: #2e7d32;  }
+
+ .invisible { color: white;  }
 
   input {
     width: 100%;

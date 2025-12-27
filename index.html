@@ -4,16 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Aplikacja do zapisów na zajęcia dodatkowe</title>
-
-  <!-- Bootstrap CSS najpierw 
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
--->
-  <!-- Twój lokalny CSS -->
   <?!= include('style') ?>
 </head>
 <body>
   <div class="container mt-3">
-    <h1>📅 Lista zajęć mobile</h1>
+    <h1>📅 Lista zajęć dodatkowych</h1>
     <div id="container">Ładowanie zajęć...</div>
   </div>
 
@@ -29,6 +24,14 @@
         container.textContent = 'Brak zajęć do wyświetlenia.';
         return;
       }
+
+      const refreshBtn = document.createElement('button');
+        refreshBtn.textContent = '🔄 Odśwież listę';
+        refreshBtn.onclick = () => {
+          container.innerHTML = 'Odświeżanie...';
+          google.script.run.withSuccessHandler(render).getZajeciaList();
+        };
+        container.appendChild(refreshBtn);
 
       // Grupowanie zajęć po dniach
       const grouped = {};
@@ -56,19 +59,24 @@
             <h3>${z.nazwa}</h3>
             <p><strong>⏰</strong> ${z.godzina_od} – ${z.godzina_do}</p>
             <p><strong>🎓 Klasa:</strong> ${z.klasa}</p>
-            <p><strong>Ilość dostępnych miejsc:</strong> ${z.max_limit}</p>
-            <p><strong>Czy dostępne:</strong> ${z.min_limit}</p>
-            <p><strong>Czy zostanie uruchomione:</strong> ${z.min_limit}</p>
+            <p><strong>Ilość dostępnych miejsc:</strong> ${z.ileDostepnych}</p>
+            <p class='invisible'>max: ${z.max_limit} min:${z.min_limit} ile: ${z.ileZapisanych} </p>
+            <p class="${z.czyUruchomione ? 'run' : 'not_run'}">
+              ${z.czyUruchomione ? 'Zajęcie zostanie uruchomione': 'Brak minimalnej ilości uczestników'}
+            </p>
             <p class="${z.platne ? 'paid' : 'free'}">
               ${z.platne ? '💰 Płatne' : '✅ Bezpłatne'}
             </p>
           `;
 
           const button = document.createElement('button');
-          button.textContent = 'Zapisz dziecko';
+          button.textContent = z.ileDostepnych > 0 ? '✅ Zapisz dziecko' : '❌ Brak miejsc';
+          button.disabled = z.ileDostepnych <= 0;
+          button.className = z.ileDostepnych > 0 ? '' : 'disabled';
+          if (z.ileDostepnych > 0) {
           button.onclick = () => openDrawer(z);
+          }
           card.appendChild(button);
-
           grid.appendChild(card);
         });
 
@@ -130,7 +138,10 @@
       document.body.appendChild(drawer);
 
       overlay.onclick = () => { drawer.remove(); overlay.remove(); };
-      document.getElementById('cancelForm').onclick = () => { drawer.remove(); overlay.remove(); };
+      document.getElementById('cancelForm').onclick = () => { 
+        drawer.remove(); overlay.remove();
+        google.script.run.withSuccessHandler(render).getZajeciaList();
+        };
       document.getElementById('submitForm').onclick = () => {
         const data = {
           id_zajecia: zajecie.id,
@@ -143,8 +154,10 @@
           showMessage(msg);
           drawer.remove();
           overlay.remove();
+          google.script.run.withSuccessHandler(render).getZajeciaList();
         }).withFailureHandler(err => {
           showMessage('Błąd: ' + err.message, 'red');
+          google.script.run.withSuccessHandler(render).getZajeciaList();
         }).zapiszDziecko(data);
       };
     }

@@ -8,7 +8,7 @@
 </head>
 <body>
   <div class="container mt-3">
-    <h1>📅 Lista zajęć dodatkowych</h1>
+    <h1>📋 Lista zajęć dodatkowych</h1>
     <div id="container">Ładowanie zajęć...</div>
   </div>
 
@@ -106,7 +106,9 @@
       setTimeout(() => div.remove(), 3000);
     }
 
-    // Funkcja drawer
+
+
+    // Funkcja drawer ---------------- formularz do zapisow ---------------
     function openDrawer(zajecie) {
       const overlay = document.createElement('div');
       overlay.className = 'drawer-overlay active';
@@ -117,15 +119,15 @@
       <h3>Zapis na: ${zajecie.nazwa}</h3>
       
       <label>Imię i nazwisko dziecka
-        <input type="text" id="uczen" required>
+        <input type="text" id="uczen" required maxlength="50">
       </label>
       
       <label>Klasa
-        <input type="text" id="klasa" required>
+        <input type="number" id="klasa" required min="1" max="8" step="1">
       </label>
       
       <label>Imię i nazwisko rodzica
-        <input type="text" id="rodzic" required>
+        <input type="text" id="rodzic" required required maxlength="50">
       </label>
       
       <div style="display: flex; gap: 10px; flex-wrap: wrap;">
@@ -133,33 +135,79 @@
         <button id="cancelForm" style="background: #aaa; flex: 1;">❌ Anuluj</button>
       </div>
     `;
-
       document.body.appendChild(overlay);
       document.body.appendChild(drawer);
-
       overlay.onclick = () => { drawer.remove(); overlay.remove(); };
-      document.getElementById('cancelForm').onclick = () => { 
+      
+      const submitBtn = document.getElementById('submitForm');
+      const cancelBtn = document.getElementById('cancelForm');
+
+      cancelBtn.onclick = () => { 
         drawer.remove(); overlay.remove();
         google.script.run.withSuccessHandler(render).getZajeciaList();
         };
-      document.getElementById('submitForm').onclick = () => {
-        const data = {
-          id_zajecia: zajecie.id,
-          nazwa: zajecie.nazwa,
-          uczen: document.getElementById('uczen').value.trim(),
-          klasa: document.getElementById('klasa').value.trim(),
-          rodzic: document.getElementById('rodzic').value.trim()
-        };
-        google.script.run.withSuccessHandler(msg => {
+     
+      submitBtn.onclick = () => {  // START-----
+      const uczenEl = document.getElementById('uczen');
+      const klasaEl = document.getElementById('klasa');
+      const rodzicEl = document.getElementById('rodzic');
+
+      [uczenEl, klasaEl, rodzicEl].forEach(el => el.classList.remove('input-error'));
+
+      const uczen = uczenEl.value.trim();
+      const klasaStr = klasaEl.value.trim();
+      const rodzic = rodzicEl.value.trim();
+
+      let hasError = false;
+
+      if (!uczen || uczen.length < 3 || uczen.length > 50) {
+        uczenEl.classList.add('input-error');
+        hasError = true;
+      }
+      if (!rodzic || rodzic.length < 3 || rodzic.length > 50) {
+        rodzicEl.classList.add('input-error');
+        hasError = true;
+      }
+      const klasaNum = parseInt(klasaStr, 10);
+      if (isNaN(klasaNum) || klasaNum < 1 || klasaNum > 8) {
+        klasaEl.classList.add('input-error');
+        hasError = true;
+      }
+
+      if (hasError) {
+        showMessage('Popraw zaznaczone pola (długość tekstu / klasa 1–8).', 'red');
+        return; // NIE wysyłamy do Apps Script
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.classList.add('loading');
+      submitBtn.textContent = '⌛ Zapisywanie...';
+      cancelBtn.disabled = true;
+
+      const data = {
+        id_zajecia: zajecie.id,
+        nazwa: zajecie.nazwa,
+        uczen,
+        klasa: klasaNum.toString(),
+        rodzic
+      };
+
+      google.script.run
+        .withSuccessHandler(msg => {
           showMessage(msg);
           drawer.remove();
           overlay.remove();
           google.script.run.withSuccessHandler(render).getZajeciaList();
-        }).withFailureHandler(err => {
+        })
+        .withFailureHandler(err => {
           showMessage('Błąd: ' + err.message, 'red');
           google.script.run.withSuccessHandler(render).getZajeciaList();
-        }).zapiszDziecko(data);
-      };
+        })
+        .zapiszDziecko(data);
+ }; // END
+
+
+
     }
   </script>
 </body>

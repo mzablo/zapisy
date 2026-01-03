@@ -112,6 +112,7 @@ function zapiszDziecko(zapisywanyUczen) {
   const zajeciaData = ss.getSheetByName('zajecia').getDataRange().getValues();
   const zapisyData = sheetZapisy.getDataRange().getValues();
   const aktualneZapisy = zapisyData.filter(row => row[1] == zapisywanyUczen.id_zajecia).length;
+  const zapisyDataDlaUcznia = zapisyData.filter(row => row[3] == zapisywanyUczen.uczen);
   const maxLimit = jakiLimitDlaZajecia(zapisywanyUczen.id_zajecia, zajeciaData); 
     if (aktualneZapisy >= maxLimit) {
       return `❌ Limit miejsc przekroczony! Dostępne: 0/${maxLimit}`;
@@ -120,15 +121,15 @@ function zapiszDziecko(zapisywanyUczen) {
   console.log('Zapisywany uczen: ', zapisywanyUczen);
   console.log('Zajecie na jakie zapisujemy: ', noweZajecie);
   if (!noweZajecie) {
+    console.log('Błąd: nie znaleziono zajęcia po id:', zapisywanyUczen.id_zajecia);
     return 'Błąd: nie znaleziono zajęcia.';
   }
   // Sprawdzenie konfliktów
-  const konflikt = zapisyData.some(istniejacyZapis => {
-    const istniejacyUczen = istniejacyZapis[3]; // kolumna "uczen"
+  const konflikt = zapisyDataDlaUcznia.some(istniejacyZapis => {
     const istniejacaKlasa = istniejacyZapis[4]; 
     const idZajIstniejace = istniejacyZapis[1];    // id_zajecia już zapisane
     if (String(istniejacaKlasa) !== String(zapisywanyUczen.klasa)) {
-      console.log('na to zajecie nie ma konfliktu - rozne klasy');
+      //console.log('na to zajecie nie ma konfliktu - rozne klasy');
       return false;
     }
     if (idZajIstniejace == zapisywanyUczen.id_zajecia) {
@@ -140,12 +141,14 @@ function zapiszDziecko(zapisywanyUczen) {
     if (stareZajecie.dzien !== noweZajecie.dzien) {
         return false;
     }
-    return godzinyNachodza(
+    const konfliktGodzin= godzinyNachodza(
       stareZajecie.godzina_od,
       stareZajecie.godzina_do,
       noweZajecie.godzina_od,
       noweZajecie.godzina_do
     );
+     console.log('Konflikt godzin z id_zajecie: '+ idZajIstniejace);
+     return konfliktGodzin;
   });
 
   if (konflikt) {
@@ -163,7 +166,8 @@ function zapiszDziecko(zapisywanyUczen) {
     zapisywanyUczen.rodzic.trim()
   ]);
 
-  return "Zapisano dziecko!";
+   console.log('Uczen zapisany: ', zapisywanyUczen);
+   return "Zapisano dziecko!";
 }
 
 function getDzienGodzina(nazwaZajecia, dataZapisu) {

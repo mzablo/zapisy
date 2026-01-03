@@ -80,7 +80,7 @@ function zapiszDziecko(zapisywanyUczen) {
       return `❌ Limit miejsc przekroczony! Dostępne: 0/${maxLimit}`;
     }
   const noweZajecie = getZajecieById(zapisywanyUczen.id_zajecia, zajeciaData);
-  console.log('Zapisywany uczen: ', zapisywanyUczen.uczen);
+  console.log('Zapisywany uczen: ', zapisywanyUczen);
   console.log('Zajecie na jakie zapisujemy: ', noweZajecie);
   if (!noweZajecie) {
     return 'Błąd: nie znaleziono zajęcia.';
@@ -90,11 +90,11 @@ function zapiszDziecko(zapisywanyUczen) {
     const istniejacyUczen = istniejacyZapis[3]; // kolumna "uczen"
     const istniejacaKlasa = istniejacyZapis[4]; 
     const idZajIstniejace = istniejacyZapis[1];    // id_zajecia już zapisane
-    if (istniejacyUczen.toLowerCase().trim() !== zapisywanyUczen.uczen.toLowerCase().trim() 
-      && istniejacaKlasa !== zapisywanyUczen.klasa) {
+    if (String(istniejacaKlasa) !== String(zapisywanyUczen.klasa)) {
+      console.log('na to zajecie nie ma konfliktu - rozne klasy');
       return false;
     }
-    if (idZajIstniejace == zapisywanyUczen.id_zajecia && istniejacaKlasa == zapisywanyUczen.klasa) {
+    if (idZajIstniejace == zapisywanyUczen.id_zajecia) {
       console.log('Dziecko jest juz zapisane na zajecie o id: '+ idZajIstniejace);
       return true;
     }
@@ -112,7 +112,7 @@ function zapiszDziecko(zapisywanyUczen) {
   });
 
   if (konflikt) {
-    return "Błąd: dziecko jest już zapisane na to zajęcie lub ma kolizję czasową.";
+     return "Błąd: dziecko jest już zapisane na to zajęcie lub ma kolizję czasową.";
   }
 
   // Dodanie wiersza

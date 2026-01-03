@@ -54,8 +54,9 @@
         grouped[dzien].forEach(z => {
           const card = document.createElement('div');
           card.className = 'card';
-
-          card.innerHTML = `
+          const content = document.createElement('div');
+          content.className = 'card-content';
+          content.innerHTML = `
             <h3>${z.nazwa}</h3>
             <p><strong>⏰</strong> ${z.godzina_od} – ${z.godzina_do}</p>
             <p><strong>🎓 Klasa:</strong> ${z.klasa}</p>
@@ -68,7 +69,9 @@
               ${z.platne ? '💰 Płatne' : '✅ Bezpłatne'}
             </p>
           `;
-
+          card.appendChild(content);
+          grid.appendChild(card);
+        
           const button = document.createElement('button');
           button.textContent = z.ileDostepnych > 0 ? '✅ Zapisz dziecko' : '❌ Brak miejsc';
           button.disabled = z.ileDostepnych <= 0;
@@ -77,8 +80,7 @@
           button.onclick = () => openDrawer(z);
           }
           card.appendChild(button);
-          grid.appendChild(card);
-        });
+         });
 
         daySection.appendChild(grid);
         container.appendChild(daySection);

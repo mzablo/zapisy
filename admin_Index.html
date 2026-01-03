@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>Panel admina – zapisy</title>
+  <?!= include('Style'); ?>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+  <h1>📋 Panel admina – zapisy na zajęcia</h1>
+
+  <div class="toolbar">
+    <button id="refreshBtn">🔄 Odśwież</button>
+    <input type="text" id="searchInput" placeholder="Szukaj ucznia / zajęć...">
+    <span class="search-info" id="searchInfo"></span>
+  </div>
+
+  <div class="table-wrapper">
+    <table id="recordsTable">
+      <thead>
+        <tr>
+          <th>Uczeń</th>
+          <th>Klasa ucznia</th>
+          <th>Zajęcia</th>
+          <th>Dzień</th>
+          <th>Godziny</th>
+          <th>Klasa zajęć</th>
+          <th>Status zajęć</th>
+          <th>Miejsca</th>
+          <th>Płatność</th>
+          <th>Rodzic</th>
+          <th>Data zapisu</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="11">Ładowanie zapisów...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    let allRecords = [];
+
+    function loadData() {
+      const tbody = document.querySelector('#recordsTable tbody');
+      tbody.innerHTML = '<tr><td colspan="11">Ładowanie zapisów...</td></tr>';
+
+      google.script.run
+      .withSuccessHandler(records => {
+        console.log('ADMIN RAW:', records);
+        renderRecords(records);
+      })
+      .withFailureHandler(err => {
+        console.error('SERVER ERROR:', err);
+        alert('Błąd po stronie serwera – sprawdź logi Apps Script');
+      }).getAdminRecords();
+    }
+    
+    function renderRecords(records) {
+      allRecords = records || [];
+      const tbody = document.querySelector('#recordsTable tbody');
+      tbody.innerHTML = '';
+
+      if (!allRecords.length) {
+        tbody.innerHTML = '<tr><td colspan="11">Brak zapisów.</td></tr>';
+        document.getElementById('searchInfo').textContent = '';
+        return;
+      }
+
+      allRecords.forEach(rec => {
+        const tr = document.createElement('tr');
+
+        const tdUczen = document.createElement('td');
+        tdUczen.textContent = rec.uczen;
+        tr.appendChild(tdUczen);
+
+        const tdKlasaUcz = document.createElement('td');
+        tdKlasaUcz.innerHTML = `<span class="pill-class">kl. ${rec.klasa_ucznia}</span>`;
+        tr.appendChild(tdKlasaUcz);
+
+        const tdZaj = document.createElement('td');
+        tdZaj.textContent = rec.zajecie_nazwa;
+        tr.appendChild(tdZaj);
+
+        const tdDzien = document.createElement('td');
+        tdDzien.textContent = rec.dzien;
+        tr.appendChild(tdDzien);
+
+        const tdGodz = document.createElement('td');
+        tdGodz.textContent = rec.godzina_od && rec.godzina_do 
+          ? `${rec.godzina_od}–${rec.godzina_do}` 
+          : '';
+        tr.appendChild(tdGodz);
+
+        const tdKlasaZaj = document.createElement('td');
+        tdKlasaZaj.textContent = rec.klasa_zajec;
+        tr.appendChild(tdKlasaZaj);
+
+        const tdStatus = document.createElement('td');
+        const statusSpan = document.createElement('span');
+        statusSpan.className = 'badge ' + (rec.czy_uruchomione ? 'badge-ok' : 'badge-warn');
+        statusSpan.textContent = rec.czy_uruchomione ? 'Uruchomione' : 'Nieuruchomione';
+        tdStatus.appendChild(statusSpan);
+        tr.appendChild(tdStatus);
+
+        const tdMiejsca = document.createElement('td');
+        tdMiejsca.textContent = `${rec.aktualne_zapisy}/${rec.max_limit}`;
+        tr.appendChild(tdMiejsca);
+
+        const tdPlatnosc = document.createElement('td');
+        const platSpan = document.createElement('span');
+        platSpan.className = 'badge ' + (rec.platne ? 'badge-paid' : 'badge-free');
+        platSpan.textContent = rec.platne ? 'Płatne' : 'Bezpłatne';
+        tdPlatnosc.appendChild(platSpan);
+        tr.appendChild(tdPlatnosc);
+
+        const tdRodzic = document.createElement('td');
+        tdRodzic.textContent = rec.rodzic;
+        tr.appendChild(tdRodzic);
+
+        const tdData = document.createElement('td');
+        tdData.textContent = rec.data_zapisu ? new Date(rec.data_zapisu).toLocaleString('pl-PL') : '';
+        tr.appendChild(tdData);
+
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('searchInfo').textContent = `Łącznie zapisów: ${allRecords.length}`;
+    }
+
+    // Proste filtrowanie po uczniu / zajęciach
+    function applyFilter() {
+      const q = document.getElementById('searchInput').value.trim().toLowerCase();
+      const tbody = document.querySelector('#recordsTable tbody');
+      tbody.innerHTML = '';
+
+      const filtered = !q
+        ? allRecords
+        : allRecords.filter(r =>
+            (r.uczen || '').toLowerCase().includes(q) ||
+            (r.zajecie_nazwa || '').toLowerCase().includes(q)
+          );
+
+      if (!filtered.length) {
+        tbody.innerHTML = '<tr><td colspan="11">Brak wyników dla podanego filtrowania.</td></tr>';
+        document.getElementById('searchInfo').textContent = `0 wyników`;
+        return;
+      }
+
+      filtered.forEach(rec => {
+        const tr = document.createElement('tr');
+
+        const tdUczen = document.createElement('td');
+        tdUczen.textContent = rec.uczen;
+        tr.appendChild(tdUczen);
+
+        const tdKlasaUcz = document.createElement('td');
+        tdKlasaUcz.innerHTML = `<span class="pill-class">kl. ${rec.klasa_ucznia}</span>`;
+        tr.appendChild(tdKlasaUcz);
+
+        const tdZaj = document.createElement('td');
+        tdZaj.textContent = rec.zajecie_nazwa;
+        tr.appendChild(tdZaj);
+
+        const tdDzien = document.createElement('td');
+        tdDzien.textContent = rec.dzien;
+        tr.appendChild(tdDzien);
+
+        const tdGodz = document.createElement('td');
+        tdGodz.textContent = rec.godzina_od && rec.godzina_do 
+          ? `${rec.godzina_od}–${rec.godzina_do}` 
+          : '';
+        tr.appendChild(tdGodz);
+
+        const tdKlasaZaj = document.createElement('td');
+        tdKlasaZaj.textContent = rec.klasa_zajec;
+        tr.appendChild(tdKlasaZaj);
+
+        const tdStatus = document.createElement('td');
+        const statusSpan = document.createElement('span');
+        statusSpan.className = 'badge ' + (rec.czy_uruchomione ? 'badge-ok' : 'badge-warn');
+        statusSpan.textContent = rec.czy_uruchomione ? 'Uruchomione' : 'Nieuruchomione';
+        tdStatus.appendChild(statusSpan);
+        tr.appendChild(tdStatus);
+
+        const tdMiejsca = document.createElement('td');
+        tdMiejsca.textContent = `${rec.aktualne_zapisy}/${rec.max_limit}`;
+        tr.appendChild(tdMiejsca);
+
+        const tdPlatnosc = document.createElement('td');
+        const platSpan = document.createElement('span');
+        platSpan.className = 'badge ' + (rec.platne ? 'badge-paid' : 'badge-free');
+        platSpan.textContent = rec.platne ? 'Płatne' : 'Bezpłatne';
+        tdPlatnosc.appendChild(platSpan);
+        tr.appendChild(tdPlatnosc);
+
+        const tdRodzic = document.createElement('td');
+        tdRodzic.textContent = rec.rodzic;
+        tr.appendChild(tdRodzic);
+
+        const tdData = document.createElement('td');
+        tdData.textContent = rec.data_zapisu ? new Date(rec.data_zapisu).toLocaleString('pl-PL') : '';
+        tr.appendChild(tdData);
+
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('searchInfo').textContent = `Wyników: ${filtered.length} / ${allRecords.length}`;
+    }
+
+    document.getElementById('refreshBtn').onclick = loadData;
+    document.getElementById('searchInput').addEventListener('input', applyFilter);
+
+    // start
+    loadData();
+  </script>
+</body>
+</html>

@@ -69,30 +69,32 @@ function jakieMinimumDlaZajecia(id_zajecia, zajeciaData){
   return zajecieRow[7];//min_limit
  }
 
-function zapiszDziecko(data) {
+function zapiszDziecko(zapisywanyUczen) {
   const ss = SpreadsheetApp.openById(FORM_ID);
   const sheetZapisy=ss.getSheetByName('zapisy');
   const zajeciaData = ss.getSheetByName('zajecia').getDataRange().getValues();
   const zapisyData = sheetZapisy.getDataRange().getValues();
-  const aktualneZapisy = zapisyData.filter(row => row[1] == data.id_zajecia).length;
-  const maxLimit = jakiLimitDlaZajecia(data.id_zajecia, zajeciaData); 
+  const aktualneZapisy = zapisyData.filter(row => row[1] == zapisywanyUczen.id_zajecia).length;
+  const maxLimit = jakiLimitDlaZajecia(zapisywanyUczen.id_zajecia, zajeciaData); 
     if (aktualneZapisy >= maxLimit) {
       return `❌ Limit miejsc przekroczony! Dostępne: 0/${maxLimit}`;
     }
-  const noweZajecie = getZajecieById(data.id_zajecia, zajeciaData);
-  console.log('Zapisywany uczen: ', data.uczen);
+  const noweZajecie = getZajecieById(zapisywanyUczen.id_zajecia, zajeciaData);
+  console.log('Zapisywany uczen: ', zapisywanyUczen.uczen);
   console.log('Zajecie na jakie zapisujemy: ', noweZajecie);
   if (!noweZajecie) {
     return 'Błąd: nie znaleziono zajęcia.';
   }
   // Sprawdzenie konfliktów
-  const konflikt = zapisyData.some(r => {
-    const uczen = r[3]; // kolumna "uczen"
-    const idZajIstniejace = r[1];    // id_zajecia już zapisane
-    if (uczen.toLowerCase().trim() !== data.uczen.toLowerCase().trim()) {
+  const konflikt = zapisyData.some(istniejacyZapis => {
+    const istniejacyUczen = istniejacyZapis[3]; // kolumna "uczen"
+    const istniejacaKlasa = istniejacyZapis[4]; 
+    const idZajIstniejace = istniejacyZapis[1];    // id_zajecia już zapisane
+    if (istniejacyUczen.toLowerCase().trim() !== zapisywanyUczen.uczen.toLowerCase().trim() 
+      && istniejacaKlasa !== zapisywanyUczen.klasa) {
       return false;
     }
-    if (idZajIstniejace == data.id_zajecia) {
+    if (idZajIstniejace == zapisywanyUczen.id_zajecia && istniejacaKlasa == zapisywanyUczen.klasa) {
       console.log('Dziecko jest juz zapisane na zajecie o id: '+ idZajIstniejace);
       return true;
     }
@@ -116,12 +118,12 @@ function zapiszDziecko(data) {
   // Dodanie wiersza
   sheetZapisy.appendRow([
     zapisyData.length + 1,
-    data.id_zajecia,
-    data.nazwa,
-    data.uczen.trim(),
-    data.klasa,
+    zapisywanyUczen.id_zajecia,
+    zapisywanyUczen.nazwa,
+    zapisywanyUczen.uczen.trim(),
+    zapisywanyUczen.klasa,
     new Date(), // automatyczna data zapisu
-    data.rodzic.trim()
+    zapisywanyUczen.rodzic.trim()
   ]);
 
   return "Zapisano dziecko!";

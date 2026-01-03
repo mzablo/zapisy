@@ -183,7 +183,7 @@
 
       submitBtn.disabled = true;
       submitBtn.classList.add('loading');
-      submitBtn.textContent = '⌛ Zapisywanie...';
+      submitBtn.textContent = '⌛ Zapisz';
       cancelBtn.disabled = true;
 
       const data = {
@@ -196,12 +196,12 @@
 
       google.script.run
         .withSuccessHandler(msg => {
-          showMessage(msg);
+         const isError = msg.startsWith('Błąd') || msg.startsWith('❌');
+          showMessage(msg, isError ? 'red' : 'green');
           drawer.remove();
           overlay.remove();
           google.script.run.withSuccessHandler(render).getZajeciaList();
-        })
-        .withFailureHandler(err => {
+        }).withFailureHandler(err => {
           showMessage('Błąd: ' + err.message, 'red');
           google.script.run.withSuccessHandler(render).getZajeciaList();
         })

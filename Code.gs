@@ -79,15 +79,34 @@ function zapiszDziecko(data) {
     if (aktualneZapisy >= maxLimit) {
       return `❌ Limit miejsc przekroczony! Dostępne: 0/${maxLimit}`;
     }
-
+  const noweZajecie = getZajecieById(data.id_zajecia, zajeciaData);
+  console.log('Zapisywany uczen: ', data.uczen);
+  console.log('Zajecie na jakie zapisujemy: ', noweZajecie);
+  if (!noweZajecie) {
+    return 'Błąd: nie znaleziono zajęcia.';
+  }
   // Sprawdzenie konfliktów
   const konflikt = zapisyData.some(r => {
     const uczen = r[3]; // kolumna "uczen"
-    const dzien_godzina = getDzienGodzina(r[2], r[5]); // nazwa zajecia + data_zapisu
-    const now_dzien_godzina = getDzienGodzina(data.nazwa, data.data_zapisu);
-    
-    return (uczen.toLowerCase().trim() === data.uczen.toLowerCase().trim()) &&
-           (r[1] === data.id_zajecia || dzien_godzina === now_dzien_godzina);
+    const idZajIstniejace = r[1];    // id_zajecia już zapisane
+    if (uczen.toLowerCase().trim() !== data.uczen.toLowerCase().trim()) {
+      return false;
+    }
+    if (idZajIstniejace == data.id_zajecia) {
+      console.log('Dziecko jest juz zapisane na zajecie o id: '+ idZajIstniejace);
+      return true;
+    }
+    const stareZajecie = getZajecieById(idZajIstniejace, zajeciaData);
+    if (!stareZajecie) return false;
+    if (stareZajecie.dzien !== noweZajecie.dzien) {
+        return false;
+    }
+    return godzinyNachodza(
+      stareZajecie.godzina_od,
+      stareZajecie.godzina_do,
+      noweZajecie.godzina_od,
+      noweZajecie.godzina_do
+    );
   });
 
   if (konflikt) {
@@ -112,6 +131,38 @@ function getDzienGodzina(nazwaZajecia, dataZapisu) {
   return nazwaZajecia + '|' + dataZapisu; 
 }
 
+function getZajecieById(id_zajecia, zajeciaData) {
+  // zakładamy, że zajeciaData to już tablica BEZ nagłówka
+  const row = zajeciaData.find(r => r[0] == id_zajecia);
+  if (!row) return null;
+  return {
+    id: row[0],
+    nazwa: row[1],
+    dzien: row[2],
+    godzina_od: row[3],
+    godzina_do: row[4],
+    klasa: row[5]//moze sie przyda jesli spr czy podana klasa ucznia pasuje do zajecia
+  };
+}
+
+function godzinyNachodza(godzOd1, godzDo1, godzOd2, godzDo2) {
+  // zakładamy format "HH:MM" lub Date z arkusza
+  const t1_start = toMinutes(godzOd1);
+  const t1_end   = toMinutes(godzDo1);
+  const t2_start = toMinutes(godzOd2);
+  const t2_end   = toMinutes(godzDo2);
+
+  // nachodzenie: początek jednego < koniec drugiego i odwrotnie
+  return t1_start < t2_end && t2_start < t1_end;
+}
+
+function toMinutes(v) {
+  if (v instanceof Date) {
+    return v.getHours() * 60 + v.getMinutes();
+  }
+  const [h, m] = v.toString().split(':');
+  return parseInt(h, 10) * 60 + parseInt(m || '0', 10);
+}
 
 function formatTime(value) {
   if (!value) return "";

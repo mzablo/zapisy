@@ -20,6 +20,11 @@
       const container = document.getElementById('container');
       container.innerHTML = ''; // czyścimy napis "Ładowanie"
 
+      if (!data || data.status === 'error') {
+        container.textContent = data.message;
+        return;
+      }
+
       if (!data || data.length === 0) {
         container.textContent = 'Brak zajęć do wyświetlenia.';
         return;

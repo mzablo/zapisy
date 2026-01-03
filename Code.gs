@@ -16,8 +16,45 @@ function getFormHtml() {
   return HtmlService.createHtmlOutputFromFile('form').getContent();
 }
 
+function getZapisyWindow() {
+  const ss = SpreadsheetApp.openById(FORM_ID);
+  const sheet = ss.getSheetByName('ustawienia');
+  const values = sheet.getRange(2, 1, 1, 2).getValues()[0]; // A2:B2
+
+  const zapisyOd = values[0]; // Date z arkusza
+  const zapisyDo = values[1]; // Date z arkusza
+
+  return { zapisyOd, zapisyDo };
+}
+
 function getZajeciaList() {
   const ss = SpreadsheetApp.openById(FORM_ID);
+  const { zapisyOd, zapisyDo } = getZapisyWindow();
+  
+  const now = new Date();
+
+  if (!(zapisyOd instanceof Date) || !(zapisyDo instanceof Date)) {
+      // Błąd konfiguracji – możesz zdecydować co zrobić
+      return {
+        status: 'error',
+        message: 'Błąd konfiguracji dat zapisów w zakładce "ustawienia":'+zapisyOd +' - '+zapisyDo+'.'
+      };
+    }
+
+    if (now < zapisyOd) {
+      return {
+        status: 'error',
+        message: 'Zapisy będą dostępne od: '+formatDate(zapisyOd)
+      };
+    }
+
+    if (now > zapisyDo) {
+      return {
+        status: 'error',
+        message: 'Zapisy zostały zakończone.'
+      };
+    }
+
   const sheet = ss.getSheetByName('zajecia');
   const zajeciaData = sheet.getDataRange().getValues();
   zajeciaData.shift();
@@ -175,6 +212,11 @@ function formatTime(value) {
     return h + ":" + m;
   }
   return value.toString(); 
+}
+
+function formatDate(date) {
+  if (!(date instanceof Date)) return '';
+  return Utilities.formatDate(date, Session.getScriptTimeZone(), 'yyyy-MM-dd, HH:mm');
 }
 
 

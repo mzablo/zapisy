@@ -36,11 +36,11 @@
   }
 
   .card-content {
-  flex: 1;
+    flex: 1;
   }
-  
+
   .card > button {
-  margin-top: 10px;
+    margin-top: 10px;
   }
 
   .card h3 {
@@ -54,28 +54,30 @@
   }
 
   button {
-  width: 100%;  /* Pełna szerokość */
-  margin-top: 12px;
-  padding: 12px;
-  font-size: 16px;  /* min 16px dla mobile */
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  background: #1976d2;
-  color: white;
-}
-button.disabled,
-button:disabled {
-  background: #ccc !important;
-  color: #666 !important;
-  cursor: not-allowed !important;
-  opacity: 0.6;
-}
+    width: 100%;  /* Pełna szerokość */
+    margin-top: 12px;
+    padding: 12px;
+    font-size: 16px;  /* min 16px dla mobile */
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    background: #1976d2;
+    color: white;
+  }
 
-#cancelForm {
-  background: #aaa !important;
-  margin-top: 8px;
-}
+  button.disabled,
+  button:disabled {
+    background: #ccc !important;
+    color: #666 !important;
+    cursor: not-allowed !important;
+    opacity: 0.6;
+  }
+
+  #cancelForm {
+    background: #aaa !important;
+    margin-top: 8px;
+  }
+
   button:active {
     transform: scale(0.98);
   }
@@ -84,9 +86,9 @@ button:disabled {
   .free { color: #2e7d32; font-weight: bold; }
 
   .notRun { color: #c62828; }
-  .run { color: #2e7d32;  }
+  .run { color: #2e7d32; }
 
- .invisible { color: white;  }
+  .invisible { color: white; }
 
   input {
     width: 100%;
@@ -105,7 +107,6 @@ button:disabled {
     background: rgba(0,0,0,0.5);
     z-index: 999;
   }
-  
 
   .drawer {
     position: fixed;
@@ -114,67 +115,147 @@ button:disabled {
     padding: 20px;
     box-shadow: -2px 0 10px rgba(0,0,0,0.3);
     max-height: 90vh;
-    overflow-y: auto;  /* Ważne! scroll dla długiej zawartości */
+    overflow-y: auto;  /* scroll dla długiej zawartości */
     box-sizing: border-box;
   }
 
   /* Desktop - z prawej */
-@media (min-width: 768px) {
-  .drawer {
-    top: 0;
-    right: 0;
-    width: 320px;
-    height: 100%;
-    border-radius: 0;
+  @media (min-width: 768px) {
+    .drawer {
+      top: 0;
+      right: 0;
+      width: 320px;
+      height: 100%;
+      border-radius: 0;
+    }
   }
-}
 
-/* Mobile - z dołu */
-@media (max-width: 767px) {
-  .drawer {
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    max-height: 80vh;  /* Maks 80% ekranu */
+  /* Mobile - z dołu */
+  @media (max-width: 767px) {
+    .drawer {
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      max-height: 80vh;
+      border-radius: 16px 16px 0 0;
+      animation: slideUp 0.25s ease-out;
+    }
+  }
+
+  .input-error {
+    border: 2px solid #e53935 !important;
+    background-color: #ffebee;
+  }
+
+  .input-error:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(229,57,53,0.3);
+  }
+
+  button.loading {
+    opacity: 0.6;
+    cursor: wait !important;
+  }
+
+  .card--klasa-1 {
+    background: #f5fbf5; /* delikatny zielony */
+  }
+
+  .card--klasa-2 {
+    background: #fffef5; /* delikatny żółty */
+  }
+
+  .card--klasa-3 {
+    background: #f5f9ff; /* delikatny niebieski */
+  }
+
+  .card--klasa-4 {
+    background: #fff7fb; /* delikatny róż */
+  }
+
+  .card--klasa-1,
+  .card--klasa-2,
+  .card--klasa-3 {
+    border: 1px solid rgba(0,0,0,0.05);
+  }
+
+  /* --- NOWE: taby po klasach --- */
+  .refresh-section {
+    margin-bottom: 1rem;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid #e0e0e0;
+    overflow-x: auto;
+  }
+
+  .tab-btn {
+    border: none;
+    background: #e3f2fd;
+    color: #0d47a1;
+    padding: 8px 16px;
     border-radius: 16px 16px 0 0;
-    animation: slideUp 0.25s ease-out;
+    cursor: pointer;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: background 0.2s, color 0.2s, transform 0.1s;
   }
-}
 
-.input-error {
-  border: 2px solid #e53935 !important;
-  background-color: #ffebee;
-}
+  .tab-btn:hover {
+    background: #bbdefb;
+  }
 
-.input-error:focus {
-  outline: none;
-  box-shadow: 0 0 0 2px rgba(229,57,53,0.3);
-}
+  .tab-btn.active {
+    background: #1976d2;
+    color: #ffffff;
+    transform: translateY(1px);
+  }
 
-button.loading {
-  opacity: 0.6;
-  cursor: wait !important;
-}
+  .tab-content {
+    display: none;
+  }
 
-.card--klasa-1 {
-  background: #f5fbf5; /* delikatny zielony */
-}
+  .tab-content.active {
+    display: block;
+  }
 
-.card--klasa-2 {
-  background: #fffef5; /* delikatny żółty */
-}
+  /* --- NOWE: dni tygodnia – niebieskie belki --- */
+  .day-section {
+    margin-bottom: 2.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 4px solid #e3f2fd;
+    position: relative;
+    animation: slideInUp 0.6s ease-out;
+  }
 
-.card--klasa-3 {
-  background: #f5f9ff; /* delikatny niebieski */
-}
+  .day-title {
+    background: linear-gradient(135deg, #1976d2 0%, #42a5f5 50%, #90caf9 100%) !important;
+    color: white !important;
+    padding: 1.2rem 1.5rem;
+    margin: 0 0 1.5rem 0;
+    border-radius: 16px;
+    font-size: 1.4rem;
+    font-weight: 700;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
 
-.card--klasa-4 { background: #fff7fb; }  /* delikatny róż */
+  .day-title::before {
+    content: "📅";
+    font-size: 1.6rem;
+  }
 
-/* opcjonalnie ciut mocniejsza ramka */
-.card--klasa-1,
-.card--klasa-2,
-.card--klasa-3 {
-  border: 1px solid rgba(0,0,0,0.05);
-}
-
+  @keyframes slideInUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
 </style>

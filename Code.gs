@@ -35,30 +35,29 @@ function getZajeciaList() {
   const now = new Date();
 
   if (!(zapisyOd instanceof Date) || !(zapisyDo instanceof Date)) {
-      // Błąd konfiguracji – możesz zdecydować co zrobić
-      return {
-        status: 'error',
-        message: 'Błąd konfiguracji dat zapisów w zakładce "ustawienia":'+zapisyOd +' - '+zapisyDo+'.'
-      };
-    }
+    return {
+      status: 'error',
+      message: 'Błąd konfiguracji dat zapisów w zakładce "ustawienia": ' + zapisyOd + ' - ' + zapisyDo + '.'
+    };
+  }
 
-    if (now < zapisyOd) {
-      return {
-        status: 'error',
-        message: 'Zapisy będą dostępne od: '+formatDate(zapisyOd)
-      };
-    }
+  if (now < zapisyOd) {
+    return {
+      status: 'error',
+      message: 'Zapisy będą dostępne od: ' + formatDate(zapisyOd)
+    };
+  }
 
-    if (now > zapisyDo) {
-      return {
-        status: 'error',
-        message: 'Zapisy zostały zakończone.'
-      };
-    }
+  if (now > zapisyDo) {
+    return {
+      status: 'error',
+      message: 'Zapisy zostały zakończone.'
+    };
+  }
 
-  const sheet = ss.getSheetByName('zajecia');
-  const zajeciaData = sheet.getDataRange().getValues();
-  zajeciaData.shift();
+  const sheetZajecia = ss.getSheetByName('zajecia');
+  const zajeciaData = sheetZajecia.getDataRange().getValues();
+  zajeciaData.shift(); // usuń nagłówek
   const zapisyData = ss.getSheetByName('zapisy').getDataRange().getValues();
 
   const dniOrder = {
@@ -69,17 +68,30 @@ function getZajeciaList() {
     'Piątek': 5
   };
 
-  const activities = zajeciaData .filter(r => r[0])
-    .map(r => new Activity(r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7], r[8]))
+  const activities = zajeciaData
+    .filter(r => r[0])
+    .map(r => new Activity(
+      r[0], // id
+      r[1], // nazwa
+      r[2], // dzien
+      r[3], // godz_od
+      r[4], // godz_do
+      r[5], // klasy (np. "4,5,6")
+      r[6], // max
+      r[7], // min
+      r[8]  // platne ("TAK"/inne)
+    ))
     .map(a => {
       const aktualneZapisy = zapisyData.filter(row => row[1] == a.id).length;
-      Logger.log(a.id + ' | zapisanych: ' + aktualneZapisy +' | limit: ' + (jakiLimitDlaZajecia(a.id, zajeciaData)+" "+jakieMinimumDlaZajecia(a.id, zajeciaData)));
-      return new ActivityView(a.id, 
-        a.nazwa, 
-        a.dzien, 
-        a.godzina_od, 
-        a.godzina_do, 
-        a.klasa, 
+      Logger.log(a.id + ' | zapisanych: ' + aktualneZapisy + ' | limit: ' +
+        (jakiLimitDlaZajecia(a.id, zajeciaData) + ' ' + jakieMinimumDlaZajecia(a.id, zajeciaData)));
+      return new ActivityView(
+        a.id,
+        a.nazwa,
+        a.dzien,
+        a.godzina_od,
+        a.godzina_do,
+        a.klasy,
         a.max_limit,
         a.min_limit,
         (jakiLimitDlaZajecia(a.id, zajeciaData) - aktualneZapisy),
@@ -87,37 +99,48 @@ function getZajeciaList() {
         a.platne,
         aktualneZapisy
       );
-    }
-    )
-    .sort((a, b) => { if (dniOrder[a.dzien] !== dniOrder[b.dzien]) { return dniOrder[a.dzien] - dniOrder[b.dzien]; } });
+    })
+    .sort((a, b) => {
+      if (dniOrder[a.dzien] !== dniOrder[b.dzien]) {
+        return dniOrder[a.dzien] - dniOrder[b.dzien];
+      }
+      return 0;
+    });
 
   activities.forEach(a => {
-      Logger.log(a.nazwa + ' | ' + a.dzien + ' | ' + a.godzina_od + '-' + a.godzina_do  + ' | ' + a.ileDostepnych  + ' | ' + a.czyUruchomione +' | ' + a.platne);
-    });
+    Logger.log(
+      a.nazwa + ' | ' + a.dzien + ' | ' + a.godzina_od + '-' + a.godzina_do +
+      ' | ' + a.ileDostepnych + ' | ' + a.czyUruchomione + ' | ' + a.platne
+    );
+  });
   return activities;
 }
 
-function jakiLimitDlaZajecia(id_zajecia, zajeciaData){
+function jakiLimitDlaZajecia(id_zajecia, zajeciaData) {
   const zajecieRow = zajeciaData.find(row => row[0] == id_zajecia);
-  return zajecieRow[6];//max_limit
- }
+  return zajecieRow ? zajecieRow[6] : 0; // max_limit
+}
 
-function jakieMinimumDlaZajecia(id_zajecia, zajeciaData){
+function jakieMinimumDlaZajecia(id_zajecia, zajeciaData) {
   const zajecieRow = zajeciaData.find(row => row[0] == id_zajecia);
-  return zajecieRow[7];//min_limit
- }
+  return zajecieRow ? zajecieRow[7] : 0; // min_limit
+}
 
 function zapiszDziecko(zapisywanyUczen) {
   const ss = SpreadsheetApp.openById(FORM_ID);
-  const sheetZapisy=ss.getSheetByName('zapisy');
+  const sheetZapisy = ss.getSheetByName('zapisy');
   const zajeciaData = ss.getSheetByName('zajecia').getDataRange().getValues();
+  zajeciaData.shift(); // usuń nagłówek
+
   const zapisyData = sheetZapisy.getDataRange().getValues();
   const aktualneZapisy = zapisyData.filter(row => row[1] == zapisywanyUczen.id_zajecia).length;
   const zapisyDataDlaUcznia = zapisyData.filter(row => row[3] == zapisywanyUczen.uczen);
-  const maxLimit = jakiLimitDlaZajecia(zapisywanyUczen.id_zajecia, zajeciaData); 
-    if (aktualneZapisy >= maxLimit) {
-      return `❌ Limit miejsc przekroczony! Dostępne: 0/${maxLimit}`;
-    }
+
+  const maxLimit = jakiLimitDlaZajecia(zapisywanyUczen.id_zajecia, zajeciaData);
+  if (aktualneZapisy >= maxLimit) {
+    return '❌ Limit miejsc przekroczony! Dostępne: 0/' + maxLimit;
+  }
+
   const noweZajecie = getZajecieById(zapisywanyUczen.id_zajecia, zajeciaData);
   console.log('Zapisywany uczen: ', zapisywanyUczen);
   console.log('Zajecie na jakie zapisujemy: ', noweZajecie);
@@ -125,35 +148,54 @@ function zapiszDziecko(zapisywanyUczen) {
     console.log('Błąd: nie znaleziono zajęcia po id:', zapisywanyUczen.id_zajecia);
     return 'Błąd: nie znaleziono zajęcia.';
   }
-  // Sprawdzenie konfliktów
+
+  // sprawdzenie, czy klasa ucznia jest dozwolona dla tych zajęć
+  const klasaUczniaStr = zapisywanyUczen.klasa.toString().trim();
+  const klasaUczniaNum = parseInt(klasaUczniaStr.charAt(0), 10);
+  if (isNaN(klasaUczniaNum)) {
+    return 'Błąd: nieprawidłowy format klasy ucznia.';
+  }
+  if (!noweZajecie.klasy.includes(String(klasaUczniaNum))) {
+    return 'Błąd: klasa ucznia nie jest uprawniona do tych zajęć.';
+  }
+
+  // Sprawdzenie konfliktów (tylko w obrębie klasy ucznia)
   const konflikt = zapisyDataDlaUcznia.some(istniejacyZapis => {
-    const istniejacaKlasa = istniejacyZapis[4]; 
-    const idZajIstniejace = istniejacyZapis[1];    // id_zajecia już zapisane
-    if (String(istniejacaKlasa) !== String(zapisywanyUczen.klasa)) {
-      //console.log('na to zajecie nie ma konfliktu - rozne klasy');
+    const istniejacaKlasaStr = istniejacyZapis[4]; // np. "4a"
+    const istniejacaKlasaNum = parseInt(istniejacaKlasaStr.toString().charAt(0), 10);
+
+    // jeżeli inna klasa - nie porównujemy konfliktu
+    if (isNaN(istniejacaKlasaNum) || istniejacaKlasaNum !== klasaUczniaNum) {
       return false;
     }
+
+    const idZajIstniejace = istniejacyZapis[1];
+
     if (idZajIstniejace == zapisywanyUczen.id_zajecia) {
-      console.log('Dziecko jest juz zapisane na zajecie o id: '+ idZajIstniejace);
+      console.log('Dziecko jest juz zapisane na zajecie o id: ' + idZajIstniejace);
       return true;
     }
+
     const stareZajecie = getZajecieById(idZajIstniejace, zajeciaData);
     if (!stareZajecie) return false;
+
     if (stareZajecie.dzien !== noweZajecie.dzien) {
-        return false;
+      return false;
     }
-    const konfliktGodzin= godzinyNachodza(
+
+    const konfliktGodzin = godzinyNachodza(
       stareZajecie.godzina_od,
       stareZajecie.godzina_do,
       noweZajecie.godzina_od,
       noweZajecie.godzina_do
     );
-     console.log('Konflikt godzin z id_zajecie: '+ idZajIstniejace);
-     return konfliktGodzin;
+    console.log('Konflikt godzin z id_zajecie: ' + idZajIstniejace);
+    return konfliktGodzin;
   });
 
   if (konflikt) {
-     return "Błąd: dziecko "+zapisywanyUczen.uczen+ " jest już zapisane na to zajęcie lub ma kolizję czasową.  ";
+    return 'Błąd: dziecko ' + zapisywanyUczen.uczen +
+      ' jest już zapisane na to zajęcie lub ma kolizję czasową.';
   }
 
   // Dodanie wiersza
@@ -163,12 +205,13 @@ function zapiszDziecko(zapisywanyUczen) {
     zapisywanyUczen.nazwa,
     zapisywanyUczen.uczen.trim(),
     zapisywanyUczen.klasa,
-    new Date(), // automatyczna data zapisu
+    new Date(), // data zapisu
     zapisywanyUczen.rodzic.trim()
   ]);
 
-   console.log('Uczen zapisany: ', zapisywanyUczen);
-   return "Dziecko " + zapisywanyUczen.uczen + " zapisano na zajęcia "+zapisywanyUczen.nazwa + "   ";
+  console.log('Uczen zapisany: ', zapisywanyUczen);
+  return 'Dziecko ' + zapisywanyUczen.uczen +
+    ' zapisano na zajęcia ' + zapisywanyUczen.nazwa + '   ';
 }
 
 function getDzienGodzina(nazwaZajecia, dataZapisu) {
@@ -176,27 +219,28 @@ function getDzienGodzina(nazwaZajecia, dataZapisu) {
 }
 
 function getZajecieById(id_zajecia, zajeciaData) {
-  // zakładamy, że zajeciaData to już tablica BEZ nagłówka
   const row = zajeciaData.find(r => r[0] == id_zajecia);
   if (!row) return null;
+
+  const klasy = row[5]
+    ? row[5].toString().split(',').map(s => s.trim()).filter(Boolean)
+    : [];
+
   return {
     id: row[0],
     nazwa: row[1],
     dzien: row[2],
     godzina_od: row[3],
     godzina_do: row[4],
-    klasa: row[5]//moze sie przyda jesli spr czy podana klasa ucznia pasuje do zajecia
+    klasy: klasy // np. ["4","5","6"]
   };
 }
 
 function godzinyNachodza(godzOd1, godzDo1, godzOd2, godzDo2) {
-  // zakładamy format "HH:MM" lub Date z arkusza
   const t1_start = toMinutes(godzOd1);
   const t1_end   = toMinutes(godzDo1);
   const t2_start = toMinutes(godzOd2);
   const t2_end   = toMinutes(godzDo2);
-
-  // nachodzenie: początek jednego < koniec drugiego i odwrotnie
   return t1_start < t2_end && t2_start < t1_end;
 }
 
@@ -204,17 +248,19 @@ function toMinutes(v) {
   if (v instanceof Date) {
     return v.getHours() * 60 + v.getMinutes();
   }
-  const [h, m] = v.toString().split(':');
-  return parseInt(h, 10) * 60 + parseInt(m || '0', 10);
+  const parts = v.toString().split(':');
+  const h = parseInt(parts[0], 10);
+  const m = parseInt(parts[1] || '0', 10);
+  return h * 60 + m;
 }
 
 function formatTime(value) {
-  if (!value) return "";
+  if (!value) return '';
   if (value instanceof Date) {
     let h = value.getHours();
     let m = value.getMinutes();
-    if (m < 10) m = "0" + m;
-    return h + ":" + m;
+    if (m < 10) m = '0' + m;
+    return h + ':' + m;
   }
   return value.toString(); 
 }
@@ -224,29 +270,33 @@ function formatDate(date) {
   return Utilities.formatDate(date, Session.getScriptTimeZone(), 'yyyy-MM-dd, HH:mm');
 }
 
-
 class Activity {
-  constructor(id, nazwa, dzien, od, do_, klasa, max, min, platne) {
+  constructor(id, nazwa, dzien, od, do_, klasyStr, max, min, platne) {
     this.id = id;
     this.nazwa = nazwa;
     this.dzien = dzien;
     this.godzina_od = formatTime(od);
     this.godzina_do = formatTime(do_);
-    this.klasa = klasa;
+    // klasyStr np. "4,5,6"
+    this.klasy = klasyStr
+      ? klasyStr.toString().split(',').map(s => s.trim()).filter(Boolean)
+      : [];
+    this.klasa = this.klasy.join(', '); // string do wyświetlania
     this.max_limit = max;
     this.min_limit = min;
-    this.platne = platne === "TAK";
+    this.platne = platne === 'TAK';
   }
 }
 
 class ActivityView {
-  constructor(id, nazwa, dzien, od, do_, klasa, max, min, ileDostepnych, czyUruchomione, platne, ileZapisanych) {
+  constructor(id, nazwa, dzien, od, do_, klasy, max, min, ileDostepnych, czyUruchomione, platne, ileZapisanych) {
     this.id = id;
     this.nazwa = nazwa;
     this.dzien = dzien;
     this.godzina_od = formatTime(od);
     this.godzina_do = formatTime(do_);
-    this.klasa = klasa;
+    this.klasy = Array.isArray(klasy) ? klasy : [];
+    this.klasa = this.klasy.join(', ');
     this.max_limit = max;
     this.min_limit = min;
     this.ileDostepnych = ileDostepnych;

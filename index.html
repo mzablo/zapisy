@@ -12,12 +12,20 @@
   </div>
 
   <script>
-    // Pobranie danych z Apps Script
+    // globalnie: aktualnie wybrana klasa (tab)
+    let currentActiveClass = null;
+
+    // próbujemy odczytać z localStorage (utrzymanie po reloadzie strony)
+    const savedClass = window.localStorage.getItem('activeClass');
+    if (savedClass) {
+      currentActiveClass = savedClass;
+    }
+
     google.script.run.withSuccessHandler(render).getZajeciaList();
 
     function render(data) {
       const container = document.getElementById('container');
-      container.innerHTML = ''; // czyścimy napis "Ładowanie"
+      container.innerHTML = '';
 
       if (!data || data.status === 'error') {
         container.textContent = data.message;
@@ -29,77 +37,149 @@
         return;
       }
 
+      const refreshSection = document.createElement('div');
+      refreshSection.className = 'refresh-section';
+
       const refreshBtn = document.createElement('button');
-        refreshBtn.textContent = '🔄 Odśwież listę';
-        refreshBtn.onclick = () => {
-          container.innerHTML = 'Odświeżanie...';
-          google.script.run.withSuccessHandler(render).getZajeciaList();
-        };
-        container.appendChild(refreshBtn);
+      refreshBtn.textContent = '🔄 Odśwież listę';
+      refreshBtn.onclick = () => {
+        container.innerHTML = 'Odświeżanie...';
+        google.script.run.withSuccessHandler(render).getZajeciaList();
+      };
+      refreshSection.appendChild(refreshBtn);
+      container.appendChild(refreshSection);
 
-      // Grupowanie zajęć po dniach
-      const grouped = {};
+      // --- grupowanie po klasach: { klasaNum: [zajęcia] } ---
+      const byClass = {};
       data.forEach(z => {
-        if (!grouped[z.dzien]) grouped[z.dzien] = [];
-        grouped[z.dzien].push(z);
+        const firstChar = String(z.klasa).trim().charAt(0);
+        const klasaNum = parseInt(firstChar, 10);
+        if (isNaN(klasaNum)) return;
+        if (!byClass[klasaNum]) byClass[klasaNum] = [];
+        byClass[klasaNum].push(z);
       });
 
-      Object.keys(grouped).forEach(dzien => {
-        const daySection = document.createElement('div');
-        daySection.className = 'day-section';
+      const classNumbers = Object.keys(byClass).sort((a, b) => a - b);
 
-        const title = document.createElement('h2');
-        title.textContent = dzien;
-        daySection.appendChild(title);
+      const tabs = document.createElement('div');
+      tabs.className = 'tabs';
+      container.appendChild(tabs);
 
-        const grid = document.createElement('div');
-        grid.className = 'grid';
+      const contentsWrapper = document.createElement('div');
+      container.appendChild(contentsWrapper);
 
-        grouped[dzien].forEach(z => {
-          const card = document.createElement('div');
-          card.className = 'card';
-          const content = document.createElement('div');
-          content.className = 'card-content';
-          const klasaNum = parseInt(z.klasa, 10);
-          if (klasaNum === 1) {
-            card.classList.add('card--klasa-1');
-          } else if (klasaNum === 2) {
-            card.classList.add('card--klasa-2');
-          } else if (klasaNum === 3) {
-            card.classList.add('card--klasa-3');
-          } else if (klasaNum === 4) {
-            card.classList.add('card--klasa-4');
-          }
-          content.innerHTML = `
-            <h3>${z.nazwa}</h3>
-            <p><strong>⏰</strong> ${z.godzina_od} – ${z.godzina_do}</p>
-            <p><strong>🎓 Klasa:</strong> ${z.klasa}</p>
-            <p><strong>Ilość dostępnych miejsc:</strong> ${z.ileDostepnych}</p>
-            <p><string>Minimalna ilość uczestników:</strong> ${z.min_limit}</p>
-            <p class="${z.czyUruchomione ? 'run' : 'not_run'}">
-              ${z.czyUruchomione ? 'Zajęcie zostanie uruchomione': 'Brak minimalnej ilości uczestników'}
-            </p>
-            <p class="${z.platne ? 'paid' : 'free'}">
-              ${z.platne ? '💰 PŁATNE' : '✅ BEZPŁATNE'}
-            </p>
-          `;
-          card.appendChild(content);
-          grid.appendChild(card);
-        
-          const button = document.createElement('button');
-          button.textContent = z.ileDostepnych > 0 ? '✅ Zapisz dziecko' : '❌ Brak miejsc';
-          button.disabled = z.ileDostepnych <= 0;
-          button.className = z.ileDostepnych > 0 ? '' : 'disabled';
-          if (z.ileDostepnych > 0) {
-          button.onclick = () => openDrawer(z);
-          }
-          card.appendChild(button);
-         });
+      // jeśli jeszcze nie mamy wybranej klasy, bierzemy pierwszą
+      if (!currentActiveClass) {
+        currentActiveClass = classNumbers[0];
+      }
 
-        daySection.appendChild(grid);
-        container.appendChild(daySection);
+      classNumbers.forEach(klNum => {
+        // przycisk taba
+        const tabBtn = document.createElement('button');
+        tabBtn.className = 'tab-btn';
+        tabBtn.textContent = 'Klasa ' + klNum;
+        tabBtn.dataset.klasa = klNum;
+        tabs.appendChild(tabBtn);
+
+        // kontent dla tej klasy
+        const tabContent = document.createElement('div');
+        tabContent.className = 'tab-content';
+        tabContent.dataset.klasa = klNum;
+        contentsWrapper.appendChild(tabContent);
+
+        // w środku: grupowanie po dniach
+        const groupedByDay = {};
+        byClass[klNum].forEach(z => {
+          if (!groupedByDay[z.dzien]) groupedByDay[z.dzien] = [];
+          groupedByDay[z.dzien].push(z);
+        });
+
+        Object.keys(groupedByDay).forEach(dzien => {
+          const daySection = document.createElement('div');
+          daySection.className = 'day-section';
+
+          const title = document.createElement('div');
+          title.className = 'day-title';
+          title.textContent = dzien.toUpperCase();
+          daySection.appendChild(title);
+
+          const grid = document.createElement('div');
+          grid.className = 'grid';
+
+          groupedByDay[dzien].forEach(z => {
+            const card = document.createElement('div');
+            card.className = 'card';
+
+            const content = document.createElement('div');
+            content.className = 'card-content';
+
+            const klasaNumInt = parseInt(z.klasa, 10);
+            if (klasaNumInt === 1) {
+              card.classList.add('card--klasa-1');
+            } else if (klasaNumInt === 2) {
+              card.classList.add('card--klasa-2');
+            } else if (klasaNumInt === 3) {
+              card.classList.add('card--klasa-3');
+            } else if (klasaNumInt === 4) {
+              card.classList.add('card--klasa-4');
+            }
+
+            content.innerHTML = `
+              <h3>${z.nazwa}</h3>
+              <p><strong>⏰</strong> ${z.godzina_od} – ${z.godzina_do}</p>
+              <p><strong>🎓 Klasa:</strong> ${z.klasa}</p>
+              <p><strong>Ilość dostępnych miejsc:</strong> ${z.ileDostepnych}</p>
+              <p><strong>Minimalna ilość uczestników:</strong> ${z.min_limit}</p>
+              <p class="${z.czyUruchomione ? 'run' : 'not_run'}">
+                ${z.czyUruchomione ? 'Zajęcie zostanie uruchomione' : 'Brak minimalnej ilości uczestników'}
+              </p>
+              <p class="${z.platne ? 'paid' : 'free'}">
+                ${z.platne ? '💰 PŁATNE' : '✅ BEZPŁATNE'}
+              </p>
+            `;
+            card.appendChild(content);
+
+            const button = document.createElement('button');
+            button.textContent = z.ileDostepnych > 0 ? '✅ Zapisz dziecko' : '❌ Brak miejsc';
+            button.disabled = z.ileDostepnych <= 0;
+            button.className = z.ileDostepnych > 0 ? '' : 'disabled';
+            if (z.ileDostepnych > 0) {
+              button.onclick = () => openDrawer(z);
+            }
+            card.appendChild(button);
+
+            grid.appendChild(card);
+          });
+
+          daySection.appendChild(grid);
+          tabContent.appendChild(daySection);
+        });
       });
+
+      // aktywacja startowa – używamy currentActiveClass
+      setActiveClassTab(currentActiveClass);
+
+      // obsługa kliknięcia w tab
+      tabs.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const kl = btn.dataset.klasa;
+          currentActiveClass = kl;
+          window.localStorage.setItem('activeClass', kl);
+          setActiveClassTab(kl);
+        });
+      });
+
+      function setActiveClassTab(kl) {
+        tabs.querySelectorAll('.tab-btn').forEach(b => {
+          b.classList.toggle('active', b.dataset.klasa === String(kl));
+        });
+        contentsWrapper.querySelectorAll('.tab-content').forEach(c => {
+          c.classList.toggle('active', c.dataset.klasa === String(kl));
+        });
+      }
     }
+
+    // ---------------- KOMUNIKATY I FORMULARZ ----------------
 
     function showZapiszResult(msg, color = 'green') {
       const oldMsg = document.getElementById('custom-message');
@@ -110,17 +190,16 @@
       div.style.position = 'fixed';
       div.style.top = '50%';
       div.style.left = '50%';
-      div.style.transform = 'translate(-50%, -50%)'; // wyśrodkowanie
+      div.style.transform = 'translate(-50%, -50%)';
       div.style.background = color;
       div.style.color = 'white';
       div.style.padding = '36px 36px 28px 28px';
       div.style.borderRadius = '12px';
       div.style.boxShadow = '0 0 20px rgba(0,0,0,0.4)';
       div.style.zIndex = 2000;
-      div.style.fontSize = '18px';                 // większa czcionka
+      div.style.fontSize = '18px';
       div.style.maxWidth = '80vw';
       div.style.textAlign = 'center';
-      div.style.position = 'fixed';
 
       const text = document.createElement('div');
       text.textContent = msg;
@@ -148,7 +227,6 @@
       document.body.appendChild(div);
     }
 
-    // Funkcja do pokazywania komunikatów
     function showMessage(msg) {
       const oldMsg = document.getElementById('custom-message');
       if (oldMsg) oldMsg.remove();
@@ -169,35 +247,32 @@
       setTimeout(() => div.remove(), 3000);
     }
 
-
-
-    // Funkcja drawer ---------------- formularz do zapisow ---------------
     function openDrawer(zajecie) {
       const overlay = document.createElement('div');
       overlay.className = 'drawer-overlay active';
 
       const drawer = document.createElement('div');
       drawer.className = 'drawer open';
-     drawer.innerHTML = `
-      <h3>Zapis na: ${zajecie.nazwa}</h3>
-      
-      <label>Nazwisko i imię dziecka
-        <input type="text" id="uczen" required maxlength="50">
-      </label>
-      
-      <label>Klasa
-        <input type="text" id="klasa" required maxlength="2">
-      </label>
-      
-      <label>Nazwisko i imię rodzica
-        <input type="text" id="rodzic" required required maxlength="50">
-      </label>
-      
-      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-        <button id="submitForm" style="background: #1976d2; flex: 1;">✅ Zapisz</button>
-        <button id="cancelForm" style="background: #aaa; flex: 1;">❌ Anuluj</button>
-      </div>
-    `;
+      drawer.innerHTML = `
+        <h3>Zapis na: ${zajecie.nazwa}</h3>
+        
+        <label>Nazwisko i imię dziecka
+          <input type="text" id="uczen" required maxlength="50">
+        </label>
+        
+        <label>Klasa
+          <input type="text" id="klasa" required maxlength="2">
+        </label>
+        
+        <label>Nazwisko i imię rodzica
+          <input type="text" id="rodzic" required maxlength="50">
+        </label>
+        
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <button id="submitForm" style="background: #1976d2; flex: 1;">✅ Zapisz</button>
+          <button id="cancelForm" style="background: #aaa; flex: 1;">❌ Anuluj</button>
+        </div>
+      `;
       document.body.appendChild(overlay);
       document.body.appendChild(drawer);
       overlay.onclick = () => { drawer.remove(); overlay.remove(); };
@@ -208,70 +283,67 @@
       cancelBtn.onclick = () => { 
         drawer.remove(); overlay.remove();
         google.script.run.withSuccessHandler(render).getZajeciaList();
-        };
-     
-      submitBtn.onclick = () => {  // START-----
-      const uczenEl = document.getElementById('uczen');
-      const klasaEl = document.getElementById('klasa');
-      const rodzicEl = document.getElementById('rodzic');
-
-      [uczenEl, klasaEl, rodzicEl].forEach(el => el.classList.remove('input-error'));
-
-      const uczen = uczenEl.value.trim();
-      const klasaStr = klasaEl.value.trim();
-      const rodzic = rodzicEl.value.trim();
-
-      let hasError = false;
-
-      if (!uczen || uczen.length < 3 || uczen.length > 50) {
-        uczenEl.classList.add('input-error');
-        hasError = true;
-      }
-      if (!rodzic || rodzic.length < 3 || rodzic.length > 50) {
-        rodzicEl.classList.add('input-error');
-        hasError = true;
-      }
-      const firstChar = klasaStr.charAt(0);
-      const klasaNum = parseInt(firstChar, 10);
-      if (isNaN(klasaNum) || klasaNum < 1 || klasaNum > 8) {
-        klasaEl.classList.add('input-error');
-        hasError = true;
-      }
-
-      if (hasError) {
-        showMessage('Popraw zaznaczone pola.');
-        return; // NIE wysyłamy do Apps Script
-      }
-
-      submitBtn.disabled = true;
-      submitBtn.classList.add('loading');
-      submitBtn.textContent = '⌛ Zapisz';
-      cancelBtn.disabled = true;
-
-      const data = {
-        id_zajecia: zajecie.id,
-        nazwa: zajecie.nazwa,
-        uczen,
-        klasa: klasaStr,
-        rodzic
       };
+     
+      submitBtn.onclick = () => {
+        const uczenEl = document.getElementById('uczen');
+        const klasaEl = document.getElementById('klasa');
+        const rodzicEl = document.getElementById('rodzic');
 
-      google.script.run
-        .withSuccessHandler(msg => {
-         const isError = msg.startsWith('Błąd') || msg.startsWith('❌');
-          showZapiszResult(msg, isError ? 'red' : 'green');
-          drawer.remove();
-          overlay.remove();
-          google.script.run.withSuccessHandler(render).getZajeciaList();
-        }).withFailureHandler(err => {
-          showZapiszResult('Błąd: ' + err.message, 'red');
-          google.script.run.withSuccessHandler(render).getZajeciaList();
-        })
-        .zapiszDziecko(data);
- }; // END
+        [uczenEl, klasaEl, rodzicEl].forEach(el => el.classList.remove('input-error'));
 
+        const uczen = uczenEl.value.trim();
+        const klasaStr = klasaEl.value.trim();
+        const rodzic = rodzicEl.value.trim();
 
+        let hasError = false;
 
+        if (!uczen || uczen.length < 3 || uczen.length > 50) {
+          uczenEl.classList.add('input-error');
+          hasError = true;
+        }
+        if (!rodzic || rodzic.length < 3 || rodzic.length > 50) {
+          rodzicEl.classList.add('input-error');
+          hasError = true;
+        }
+        const firstChar = klasaStr.charAt(0);
+        const klasaNum = parseInt(firstChar, 10);
+        if (isNaN(klasaNum) || klasaNum < 1 || klasaNum > 8) {
+          klasaEl.classList.add('input-error');
+          hasError = true;
+        }
+
+        if (hasError) {
+          showMessage('Popraw zaznaczone pola.');
+          return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.classList.add('loading');
+        submitBtn.textContent = '⌛ Zapisz';
+        cancelBtn.disabled = true;
+
+        const data = {
+          id_zajecia: zajecie.id,
+          nazwa: zajecie.nazwa,
+          uczen,
+          klasa: klasaStr,
+          rodzic
+        };
+
+        google.script.run
+          .withSuccessHandler(msg => {
+            const isError = msg.startsWith('Błąd') || msg.startsWith('❌');
+            showZapiszResult(msg, isError ? 'red' : 'green');
+            drawer.remove();
+            overlay.remove();
+            google.script.run.withSuccessHandler(render).getZajeciaList();
+          }).withFailureHandler(err => {
+            showZapiszResult('Błąd: ' + err.message, 'red');
+            google.script.run.withSuccessHandler(render).getZajeciaList();
+          })
+          .zapiszDziecko(data);
+      };
     }
   </script>
 </body>

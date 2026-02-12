@@ -2,6 +2,8 @@ const FORM_ID = PropertiesService.getScriptProperties().getProperty('FORM_ID') |
 
 function doGet() {
   const template = HtmlService.createTemplateFromFile('index');
+  const { zapisyOd, zapisyDo, title} = getZapisyWindow();
+  template.appTitle = title;
   return template.evaluate()
     .setTitle('Aplikacja do zapisów')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
@@ -19,18 +21,17 @@ function getFormHtml() {
 function getZapisyWindow() {
   const ss = SpreadsheetApp.openById(FORM_ID);
   const sheet = ss.getSheetByName('ustawienia');
-  const values = sheet.getRange(2, 1, 1, 2).getValues()[0]; // A2:B2
+  const values = sheet.getRange(2, 1, 1, 3).getValues()[0]; // A2:C2
 
-  const zapisyOd = values[0]; // Date z arkusza
-  const zapisyDo = values[1]; // Date z arkusza
-
-  return { zapisyOd, zapisyDo };
-}
+  const zapisyOd = values[0]; // A2 – data od
+  const zapisyDo = values[1]; // B2 – data do
+  const title    = values[2]; // C2 – tytuł
+  return { zapisyOd, zapisyDo, title };
+} 
 
 function getZajeciaList() {
   const ss = SpreadsheetApp.openById(FORM_ID);
-  const { zapisyOd, zapisyDo } = getZapisyWindow();
-  
+  const { zapisyOd, zapisyDo} = getZapisyWindow();
   const now = new Date();
 
   if (!(zapisyOd instanceof Date) || !(zapisyDo instanceof Date)) {
@@ -152,7 +153,7 @@ function zapiszDziecko(zapisywanyUczen) {
   });
 
   if (konflikt) {
-     return "Błąd: dziecko jest już zapisane na to zajęcie lub ma kolizję czasową.";
+     return "Błąd: dziecko "+zapisywanyUczen.uczen+ " jest już zapisane na to zajęcie lub ma kolizję czasową.  ";
   }
 
   // Dodanie wiersza
@@ -167,7 +168,7 @@ function zapiszDziecko(zapisywanyUczen) {
   ]);
 
    console.log('Uczen zapisany: ', zapisywanyUczen);
-   return "Zapisano dziecko!";
+   return "Dziecko " + zapisywanyUczen.uczen + " zapisano na zajęcia "+zapisywanyUczen.nazwa + "   ";
 }
 
 function getDzienGodzina(nazwaZajecia, dataZapisu) {

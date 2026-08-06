@@ -151,11 +151,7 @@ function zapiszDziecko(zapisywanyUczen) {
 
   // sprawdzenie, czy klasa ucznia jest dozwolona dla tych zajęć
   const klasaUczniaStr = zapisywanyUczen.klasa.toString().trim();
-  const klasaUczniaNum = parseInt(klasaUczniaStr.charAt(0), 10);
-  if (isNaN(klasaUczniaNum)) {
-    return 'Błąd: nieprawidłowy format klasy ucznia.';
-  }
-  if (!noweZajecie.klasy.includes(String(klasaUczniaNum))) {
+  if (!noweZajecie.klasy.includes(klasaUczniaStr)) {
     return 'Błąd: klasa ucznia nie jest uprawniona do tych zajęć.';
   }
 

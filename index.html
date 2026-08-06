@@ -54,11 +54,14 @@
       data.forEach(z => {
         if (!Array.isArray(z.klasy) || z.klasy.length === 0) return;
 
-        z.klasy.forEach(kl => {
-          const klasaNum = parseInt(kl, 10);
-          if (isNaN(klasaNum)) return;
-          if (!byClass[klasaNum]) byClass[klasaNum] = [];
-          byClass[klasaNum].push(z);
+        const unikalneKlasy = new Set(
+          z.klasy
+            .map(kl => parseInt(kl, 10))
+            .filter(kl => !isNaN(kl))
+        );
+        unikalneKlasy.forEach(kl => {
+          if (!byClass[kl]) byClass[kl] = [];
+          byClass[kl].push(z);
         });
       });
 
@@ -131,7 +134,9 @@
             }
 
             content.innerHTML = `
-              <h3>${z.nazwa}</h3>
+              <h3>${z.nazwa}
+                <span style="font-size:10px; color: #fff;">${z.id}</span>
+              </h3>
               <p><strong>⏰</strong> ${z.godzina_od} – ${z.godzina_do}</p>
               <p><strong>🎓 Klasy:</strong> ${z.klasa}</p>
               <p><strong>Ilość dostępnych miejsc:</strong> ${z.ileDostepnych}</p>

@@ -26,11 +26,6 @@ const TRANSLATIONS = {
     registered:
       '✅ Dziecko {student} zapisano na zajęcia {activity}.',
 
-  /*  monday: 'Poniedziałek',
-    tuesday: 'Wtorek',
-    wednesday: 'Środa',
-    thursday: 'Czwartek',
-    friday: 'Piątek'*/
   },
 
   en: {
@@ -60,11 +55,6 @@ const TRANSLATIONS = {
     registered:
       '✅ Student {student} has been registered for {activity}.',
 
-    /*monday: 'Monday',
-    tuesday: 'Tuesday',
-    wednesday: 'Wednesday',
-    thursday: 'Thursday',
-    friday: 'Friday'*/
   }
 };
 

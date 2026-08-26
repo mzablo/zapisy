@@ -6,34 +6,101 @@
   <?!= include('style') ?>
 </head>
 <body>
-  <div class="container mt-3">
-    <h1>📋 <?= appTitle ?></h1>
-    <div id="container">Ładowanie zajęć...</div>
+  <div class="container mt-3">   
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h1 id="appTitle" class="mb-0">📋 <?= appTitle ?></h1>
+        <script>
+        const appTitle = "<?= appTitle ?>";
+        const appTitle_ang = "<?= appTitle_ang ?>";
+        </script>
+      <div class="lang-menu">
+        <button id="langBtn" class="lang-btn" onclick="toggleLangMenu()">
+          🌐 
+        </button>
+
+        <div id="langDropdown" class="lang-dropdown d-none">
+          <div class="lang-option" onclick="changeLanguage('en')">
+            🇬🇧 English
+          </div>
+
+          <div class="lang-option" onclick="changeLanguage('pl')">
+            🇵🇱 Polski
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+  </div>    
+    
+    </div>
+
+  <div id="loader" class="loader-container">
+    <div class="loader"></div>
+    <div class="loader-text"></div>
+  </div>
+
+    <div id="container"></div>
   </div>
 
   <script>
-    // aktualnie wybrana klasa (tab)
-    let currentActiveClass = null;
+//functions for loading   
+function showLoader(text = '') {
+  document.getElementById('loader').style.display = 'block';
+  document.getElementById('container').style.display = 'none';
 
-    // odczyt z localStorage
+  const txt = document.querySelector('.loader-text');
+  if (txt) txt.textContent = text;
+}
+
+function hideLoader() {
+  document.getElementById('loader').style.display = 'none';
+  document.getElementById('container').style.display = 'block';
+}
+
+//function for language
+  function toggleLangMenu() {
+    document
+    .getElementById('langDropdown')
+    .classList.toggle('d-none');
+  }
+
+  function changeLanguage(lang) {
+    localStorage.setItem('language', lang);
+    document
+      .getElementById('langDropdown')
+      .classList.add('d-none');
+    currentLang = lang;
+    document.getElementById('appTitle').textContent = currentLang === 'en' ? appTitle_ang: appTitle;
+    showLoader();
+    google.script.run.withSuccessHandler(render).getZajeciaList(currentLang);
+  }
+
+  let currentLang = localStorage.getItem('language') || 'pl';
+
+  // aktualnie wybrana klasa (tab)
+  let currentActiveClass = null;
+
     const savedClass = window.localStorage.getItem('activeClass');
     if (savedClass) {
       currentActiveClass = savedClass;
     }
 
-    google.script.run.withSuccessHandler(render).getZajeciaList();
+    google.script.run.withSuccessHandler(render).getZajeciaList(currentLang); 
 
     function render(data) {
+      hideLoader();
       const container = document.getElementById('container');
       container.innerHTML = '';
-
+      
       if (!data || data.status === 'error') {
         container.textContent = data.message;
         return;
       }
 
       if (!data || data.length === 0) {
-        container.textContent = 'Brak zajęć do wyświetlenia.';
+        container.textContent = t('noClasses');
         return;
       }
 
@@ -41,10 +108,11 @@
       refreshSection.className = 'refresh-section';
 
       const refreshBtn = document.createElement('button');
-      refreshBtn.textContent = '🔄 Odśwież listę';
+      refreshBtn.textContent = t('refresh');
       refreshBtn.onclick = () => {
-        container.innerHTML = 'Odświeżanie...';
-        google.script.run.withSuccessHandler(render).getZajeciaList();
+        //container.innerHTML = t('refreshing');
+        showLoader(t('refreshing'));
+        google.script.run.withSuccessHandler(render).getZajeciaList(currentLang);
       };
       refreshSection.appendChild(refreshBtn);
       container.appendChild(refreshSection);
@@ -83,7 +151,7 @@
         // przycisk taba
         const tabBtn = document.createElement('button');
         tabBtn.className = 'tab-btn';
-        tabBtn.textContent = 'Klasa ' + klNum;
+        tabBtn.textContent = `${t('class')} ${klNum}`;
         tabBtn.dataset.klasa = klNum;
         tabs.appendChild(tabBtn);
 
@@ -106,7 +174,7 @@
 
           const title = document.createElement('div');
           title.className = 'day-title';
-          title.textContent = dzien.toUpperCase();
+          title.textContent = translateDay(dzien).toUpperCase();
           daySection.appendChild(title);
 
           const grid = document.createElement('div');
@@ -132,26 +200,26 @@
             } else if (klasaNumInt === 4) {
               card.classList.add('card--klasa-4');
             }
-
+            const nazwa = currentLang === 'en' ? z.nazwa_ang : z.nazwa;
             content.innerHTML = `
-              <h3>${z.nazwa}
+              <h3>${nazwa}
                 <span style="font-size:10px; color: #fff;">${z.id}</span>
               </h3>
               <p><strong>⏰</strong> ${z.godzina_od} – ${z.godzina_do}</p>
-              <p><strong>🎓 Klasy:</strong> ${z.klasa}</p>
-              <p><strong>Ilość dostępnych miejsc:</strong> ${z.ileDostepnych}</p>
-              <p><strong>Minimalna ilość uczestników:</strong> ${z.min_limit}</p>
+              <p><strong>🎓 ${t('classes')}:</strong> ${z.klasa}</p>
+              <p><strong>${t('availablePlaces')}:</strong> ${z.ileDostepnych}</p>
+              <p><strong>${t('minimumParticipants')}:</strong> ${z.min_limit}</p>
               <p class="${z.czyUruchomione ? 'run' : 'not_run'}">
-                ${z.czyUruchomione ? 'Zajęcie zostanie uruchomione' : 'Brak minimalnej ilości uczestników'}
+                ${z.czyUruchomione ? t('activityWillRun') : t('activityNotRun')}
               </p>
               <p class="${z.platne ? 'paid' : 'free'}">
-                ${z.platne ? '💰 PŁATNE' : '✅ BEZPŁATNE'}
+                ${z.platne ? t('paid') : t('free')}
               </p>
             `;
             card.appendChild(content);
 
             const button = document.createElement('button');
-            button.textContent = z.ileDostepnych > 0 ? '✅ Zapisz dziecko' : '❌ Brak miejsc';
+            button.textContent = z.ileDostepnych > 0 ? t('registerChild') : t('noPlaces');
             button.disabled = z.ileDostepnych <= 0;
             button.className = z.ileDostepnych > 0 ? '' : 'disabled';
             if (z.ileDostepnych > 0) {
@@ -263,25 +331,26 @@
       overlay.className = 'drawer-overlay active';
 
       const drawer = document.createElement('div');
+      const nazwa = currentLang === 'en' ? zajecie.nazwa_ang : zajecie.nazwa;   
       drawer.className = 'drawer open';
       drawer.innerHTML = `
-        <h3>Zapis na: ${zajecie.nazwa}</h3>
+        <h3>${t('registration')}: ${nazwa}</h3>
         
-        <label>Nazwisko i imię dziecka
+        <label>${t('childName')}
           <input type="text" id="uczen" required maxlength="50">
         </label>
         
-        <label>Klasa
+        <label>${t('class')}
           <input type="text" id="klasa" required maxlength="2">
         </label>
         
-        <label>Nazwisko i imię rodzica
+        <label>${t('parentName')}
           <input type="text" id="rodzic" required maxlength="50">
         </label>
         
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-          <button id="submitForm" style="background: #1976d2; flex: 1;">✅ Zapisz</button>
-          <button id="cancelForm" style="background: #aaa; flex: 1;">❌ Anuluj</button>
+          <button id="submitForm" style="background: #1976d2; flex: 1;">${t('save')}</button>
+          <button id="cancelForm" style="background: #aaa; flex: 1;">${t('cancel')}</button>
         </div>
       `;
       document.body.appendChild(overlay);
@@ -293,7 +362,7 @@
 
       cancelBtn.onclick = () => { 
         drawer.remove(); overlay.remove();
-        google.script.run.withSuccessHandler(render).getZajeciaList();
+        google.script.run.withSuccessHandler(render).getZajeciaList(currentLang);
       };
      
       submitBtn.onclick = () => {
@@ -325,13 +394,13 @@
         }
 
         if (hasError) {
-          showMessage('Popraw zaznaczone pola.');
+          showMessage(t('fixFields'));
           return;
         }
 
         submitBtn.disabled = true;
         submitBtn.classList.add('loading');
-        submitBtn.textContent = '⌛ Zapisz';
+        submitBtn.textContent = t('saving');
         cancelBtn.disabled = true;
 
         const data = {
@@ -344,18 +413,97 @@
 
         google.script.run
           .withSuccessHandler(msg => {
-            const isError = msg.startsWith('Błąd') || msg.startsWith('❌');
+            const isError = msg.startsWith('Błąd') || msg.startsWith('❌') || msg.startsWith('Error');
             showZapiszResult(msg, isError ? 'red' : 'green');
             drawer.remove();
             overlay.remove();
-            google.script.run.withSuccessHandler(render).getZajeciaList();
+            google.script.run.withSuccessHandler(render).getZajeciaList(currentLang);
           }).withFailureHandler(err => {
             showZapiszResult('Błąd: ' + err.message, 'red');
-            google.script.run.withSuccessHandler(render).getZajeciaList();
+            google.script.run.withSuccessHandler(render).getZajeciaList(currentLang);
           })
-          .zapiszDziecko(data);
+          .zapiszDziecko(data, currentLang);
       };
     }
+
+    function t(key) {
+    return TRANSLATIONS[currentLang]?.[key]
+      || TRANSLATIONS.pl?.[key]
+      || key;
+    }
+    
+    function translateDay(day) {
+      const mapping = {
+        'Poniedziałek': 'monday',
+        'Wtorek': 'tuesday',
+        'Środa': 'wednesday',
+        'Czwartek': 'thursday',
+        'Piątek': 'friday'
+      };
+  return t(mapping[day] || day);
+  }
+    
+    const TRANSLATIONS = {
+  pl: {
+    loading: "Ładowanie zajęć...",
+    noClasses: "Brak zajęć do wyświetlenia.",
+    refresh: "🔄 Odśwież listę",
+    refreshing: "Odświeżanie...",
+    class: "Klasa",
+    classes: "Klasy",
+    availablePlaces: "Ilość dostępnych miejsc",
+    minimumParticipants: "Minimalna ilość uczestników",
+    activityWillRun: "Zajęcie zostanie uruchomione",
+    activityNotRun: "Brak minimalnej ilości uczestników",
+    paid: "💰 PŁATNE",
+    free: "✅ BEZPŁATNE",
+    registerChild: "✅ Zapisz dziecko",
+    noPlaces: "❌ Brak miejsc",
+    registration: "Zapis na",
+    childName: "Nazwisko i imię dziecka",
+    parentName: "Nazwisko i imię rodzica",
+    save: "✅ Zapisz",
+    cancel: "❌ Anuluj",
+    fixFields: "Popraw zaznaczone pola.",
+    saving: "⌛ Zapisywanie...",
+    monday: "Poniedziałek",
+    tuesday: "Wtorek",
+    wednesday: "Środa",
+    thursday: "Czwartek",
+    friday: "Piątek"
+    },
+
+  en: {
+    loading: "Loading activities...",
+    noClasses: "No activities available.",
+    refresh: "🔄 Refresh list",
+    refreshing: "Refreshing...",
+    class: "Class",
+    classes: "Classes",
+    availablePlaces: "Available places",
+    minimumParticipants: "Minimum participants",
+    activityWillRun: "This activity will be launched",
+    activityNotRun: "Minimum participants not reached",
+    paid: "💰 PAID",
+    free: "✅ FREE",
+    registerChild: "✅ Register child",
+    noPlaces: "❌ No places available",
+    registration: "Register for",
+    childName: "Child full name",
+    parentName: "Parent full name",
+    save: "✅ Save",
+    cancel: "❌ Cancel",
+    fixFields: "Please correct the highlighted fields.",
+    saving: "⌛ Saving...",
+    monday: "Monday",
+    tuesday: "Tuesday",
+    wednesday: "Wednesday",
+    thursday: "Thursday",
+    friday: "Friday"
+    }
+};
+
+    
   </script>
 </body>
 </html>

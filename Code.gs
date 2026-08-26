@@ -2,10 +2,11 @@ const FORM_ID = PropertiesService.getScriptProperties().getProperty('FORM_ID') |
 
 function doGet() {
   const template = HtmlService.createTemplateFromFile('index');
-  const { zapisyOd, zapisyDo, title} = getZapisyWindow();
+  const { zapisyOd, zapisyDo, title, title_ang} = getZapisyWindow();
   template.appTitle = title;
+  template.appTitle_ang = title_ang;
   return template.evaluate()
-    .setTitle('Aplikacja do zapisów')
+    .setTitle('Aplikacja do zapisów')//todo
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1.0');
 }
@@ -21,15 +22,16 @@ function getFormHtml() {
 function getZapisyWindow() {
   const ss = SpreadsheetApp.openById(FORM_ID);
   const sheet = ss.getSheetByName('ustawienia');
-  const values = sheet.getRange(2, 1, 1, 3).getValues()[0]; // A2:C2
+  const values = sheet.getRange(2, 1, 1, 4).getValues()[0]; // A2:C2
 
   const zapisyOd = values[0]; // A2 – data od
   const zapisyDo = values[1]; // B2 – data do
   const title    = values[2]; // C2 – tytuł
-  return { zapisyOd, zapisyDo, title };
+  const title_ang = values[3]; // D2 – tytuł an
+  return { zapisyOd, zapisyDo, title, title_ang };
 } 
 
-function getZajeciaList() {
+function getZajeciaList(lang = 'pl') {
   const ss = SpreadsheetApp.openById(FORM_ID);
   const { zapisyOd, zapisyDo} = getZapisyWindow();
   const now = new Date();
@@ -37,21 +39,24 @@ function getZajeciaList() {
   if (!(zapisyOd instanceof Date) || !(zapisyDo instanceof Date)) {
     return {
       status: 'error',
-      message: 'Błąd konfiguracji dat zapisów w zakładce "ustawienia": ' + zapisyOd + ' - ' + zapisyDo + '.'
+      message: t(lang, 'configError', {
+      from: zapisyOd,
+      to: zapisyDo})
     };
   }
 
   if (now < zapisyOd) {
     return {
       status: 'error',
-      message: 'Zapisy będą dostępne od: ' + formatDate(zapisyOd)
+      message: t(lang, 'registrationOpen', {
+      date: formatDate(zapisyOd)})
     };
   }
 
   if (now > zapisyDo) {
     return {
       status: 'error',
-      message: 'Zapisy zostały zakończone.'
+      message: t(lang, 'registrationClosed')
     };
   }
 
@@ -88,6 +93,7 @@ function getZajeciaList() {
       return new ActivityView(
         a.id,
         a.nazwa,
+        a.nazwa+'_ang',//todo
         a.dzien,
         a.godzina_od,
         a.godzina_do,
@@ -126,7 +132,7 @@ function jakieMinimumDlaZajecia(id_zajecia, zajeciaData) {
   return zajecieRow ? zajecieRow[7] : 0; // min_limit
 }
 
-function zapiszDziecko(zapisywanyUczen) {
+function zapiszDziecko(zapisywanyUczen, lang) {
   const ss = SpreadsheetApp.openById(FORM_ID);
   const sheetZapisy = ss.getSheetByName('zapisy');
   const zajeciaData = ss.getSheetByName('zajecia').getDataRange().getValues();
@@ -138,7 +144,7 @@ function zapiszDziecko(zapisywanyUczen) {
 
   const maxLimit = jakiLimitDlaZajecia(zapisywanyUczen.id_zajecia, zajeciaData);
   if (aktualneZapisy >= maxLimit) {
-    return '❌ Limit miejsc przekroczony! Dostępne: 0/' + maxLimit;
+    return t(lang, 'limitExceeded', {max: maxLimit});
   }
 
   const noweZajecie = getZajecieById(zapisywanyUczen.id_zajecia, zajeciaData);
@@ -146,13 +152,13 @@ function zapiszDziecko(zapisywanyUczen) {
   console.log('Zajecie na jakie zapisujemy: ', noweZajecie);
   if (!noweZajecie) {
     console.log('Błąd: nie znaleziono zajęcia po id:', zapisywanyUczen.id_zajecia);
-    return 'Błąd: nie znaleziono zajęcia.';
+    return t(lang, 'activityNotFound');
   }
 
   // sprawdzenie, czy klasa ucznia jest dozwolona dla tych zajęć
   const klasaUczniaStr = zapisywanyUczen.klasa.toString().trim();
   if (!noweZajecie.klasy.includes(klasaUczniaStr)) {
-    return 'Błąd: klasa ucznia nie jest uprawniona do tych zajęć.';
+    return t(lang, 'classNotAllowed');
   }
 
   // Sprawdzenie konfliktów (tylko w obrębie klasy ucznia)
@@ -190,8 +196,7 @@ function zapiszDziecko(zapisywanyUczen) {
   });
 
   if (konflikt) {
-    return 'Błąd: dziecko ' + zapisywanyUczen.uczen +
-      ' jest już zapisane na to zajęcie lub ma kolizję czasową.';
+    return t(lang, 'conflict', {student: zapisywanyUczen.uczen});
   }
 
   // Dodanie wiersza
@@ -206,8 +211,10 @@ function zapiszDziecko(zapisywanyUczen) {
   ]);
 
   console.log('Uczen zapisany: ', zapisywanyUczen);
-  return 'Dziecko ' + zapisywanyUczen.uczen +
-    ' zapisano na zajęcia ' + zapisywanyUczen.nazwa + '   ';
+  return t(lang, 'registered', {
+    student: zapisywanyUczen.uczen,
+    activity: zapisywanyUczen.nazwa
+   });
 }
 
 function getDzienGodzina(nazwaZajecia, dataZapisu) {
@@ -266,10 +273,12 @@ function formatDate(date) {
   return Utilities.formatDate(date, Session.getScriptTimeZone(), 'yyyy-MM-dd, HH:mm');
 }
 
+
 class Activity {
   constructor(id, nazwa, dzien, od, do_, klasyStr, max, min, platne) {
     this.id = id;
     this.nazwa = nazwa;
+    this.nazwa_ang = nazwa+'_anG'
     this.dzien = dzien;
     this.godzina_od = formatTime(od);
     this.godzina_do = formatTime(do_);
@@ -285,9 +294,10 @@ class Activity {
 }
 
 class ActivityView {
-  constructor(id, nazwa, dzien, od, do_, klasy, max, min, ileDostepnych, czyUruchomione, platne, ileZapisanych) {
+  constructor(id, nazwa, nazwa_ang, dzien, od, do_, klasy, max, min, ileDostepnych, czyUruchomione, platne, ileZapisanych) {
     this.id = id;
     this.nazwa = nazwa;
+    this.nazwa_ang = nazwa_ang;
     this.dzien = dzien;
     this.godzina_od = formatTime(od);
     this.godzina_do = formatTime(do_);

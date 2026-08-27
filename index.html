@@ -15,19 +15,9 @@
         const appTitle_ang = "<?= appTitle_ang ?>";
         </script>
       <div class="lang-menu">
-        <button id="langBtn" class="lang-btn" onclick="toggleLangMenu()">
-          🌐 
+        <button id="langBtn" class="lang-btn" onclick="toggleLanguage()">
+          🇬🇧 
         </button>
-
-        <div id="langDropdown" class="lang-dropdown d-none">
-          <div class="lang-option" onclick="changeLanguage('en')">
-            🇬🇧 English
-          </div>
-
-          <div class="lang-option" onclick="changeLanguage('pl')">
-            🇵🇱 Polski
-          </div>
-        </div>
       </div>
     </div>
 
@@ -60,13 +50,7 @@ function hideLoader() {
 }
 
 //function for language
-  function toggleLangMenu() {
-    document
-    .getElementById('langDropdown')
-    .classList.toggle('d-none');
-  }
-
-  function changeLanguage(lang) {
+  function changeLanguage(lang) {//del?
     localStorage.setItem('language', lang);
     document
       .getElementById('langDropdown')
@@ -77,8 +61,34 @@ function hideLoader() {
     google.script.run.withSuccessHandler(render).getZajeciaList(currentLang);
   }
 
-  let currentLang = localStorage.getItem('language') || 'pl';
+  function updateLanguageButton() {
+    const btn = document.getElementById('langBtn');
+    btn.textContent =
+      currentLang === 'pl'
+        ? '🇬🇧'
+        : '🇵🇱';
+  }
 
+  function toggleLanguage() {
+    currentLang =
+      currentLang === 'pl'
+        ? 'en'
+        : 'pl';
+    localStorage.setItem('language', currentLang);
+    updateLanguageButton();
+    document.getElementById('appTitle').textContent =
+      currentLang === 'en'
+        ? appTitle_ang
+        : appTitle;
+
+    showLoader();
+    google.script.run
+      .withSuccessHandler(render)
+      .getZajeciaList(currentLang);
+}
+
+  let currentLang = localStorage.getItem('language') || 'pl';
+  updateLanguageButton()
   // aktualnie wybrana klasa (tab)
   let currentActiveClass = null;
 

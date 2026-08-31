@@ -168,11 +168,11 @@ function zapiszDziecko(zapisywanyUczen, lang) {
   // Sprawdzenie konfliktów (tylko w obrębie klasy ucznia)
   const konflikt = zapisyDataDlaUcznia.some(istniejacyZapis => {
     const istniejacaKlasaStr = istniejacyZapis[4];
-  
-    // jeżeli inna klasa - nie porównujemy konfliktu
-    if (istniejacaKlasaStr.toLowerCase() !== klasaUczniaStr.toLowerCase()) {
-      return false;
-    }
+
+    if (String(istniejacaKlasaStr).trim().toLowerCase() !== String(klasaUczniaStr).trim().toLowerCase()
+) {
+   return false;
+}
 
     const idZajIstniejace = istniejacyZapis[1];
 
